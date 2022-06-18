@@ -14,15 +14,15 @@ import (
 )
 
 // Turn a string of comma separated integers into a slice of ints
-func makeIntList(csv string) ([]int, error) {
-	idlist := make([]int, 0)
+func makeIntList(csv string) ([]uint, error) {
+	idlist := make([]uint, 0)
 	separated := strings.Split(csv, ",")
 	for _, ids := range separated {
 		id, err := strconv.Atoi(ids)
 		if err != nil {
 			return nil, err
 		}
-		idlist = append(idlist, id)
+		idlist = append(idlist, uint(id))
 	}
 
 	return idlist, nil

@@ -19,12 +19,12 @@ import (
 
 // struct to receive/store command line args for measurement filtering
 type findMsmFlags struct {
-	filterID            int
+	filterID            uint
 	filterIDin          string
-	filterIDgt          int
-	filterIDgte         int
-	filterIDlt          int
-	filterIDlte         int
+	filterIDgt          uint
+	filterIDgte         uint
+	filterIDlt          uint
+	filterIDlte         uint
 	filterStartTimeGt   string
 	filterStartTimeGte  string
 	filterStartTimeLt   string
@@ -35,11 +35,11 @@ type findMsmFlags struct {
 	filterStopTimeLte   string
 	filterOneoff        bool
 	filterPeriodic      bool
-	filterInterval      int
-	filterIntervalGt    int
-	filterIntervalGte   int
-	filterIntervalLt    int
-	filterIntervalLte   int
+	filterInterval      uint
+	filterIntervalGt    uint
+	filterIntervalGte   uint
+	filterIntervalLt    uint
+	filterIntervalLte   uint
 	filterStatus        string
 	filterTags          string
 	filterType          string
@@ -52,14 +52,14 @@ type findMsmFlags struct {
 	filterDescHas       string
 	filterDescStarts    string
 	filterDescEnds      string
-	filterProbe         int
-	filterAddressFamily int
+	filterProbe         uint
+	filterAddressFamily uint
 	filterProtocol      string
 	filterMy            bool
 
 	format string
 	sort   string
-	limit  int
+	limit  uint
 	count  bool
 }
 
@@ -270,7 +270,7 @@ func parseFindMsmFlags(flags *findMsmFlags) (
 	}
 
 	if flags.filterStatus != "" {
-		var fs []int
+		var fs []uint
 		for _, item := range strings.Split(strings.ToLower(flags.filterStatus), ",") {
 			switch item {
 			case "any":
@@ -387,11 +387,11 @@ func parseFindMsmFlags(flags *findMsmFlags) (
 func parseFindMsmArgs(args []string) *findMsmFlags {
 	var flags findMsmFlags
 	// filters
-	flagsFindMsm.IntVar(&flags.filterID, "id", 0, "A particular measurement ID to fetch. If present, all other filters are ignored")
-	flagsFindMsm.IntVar(&flags.filterIDlt, "idlt", 0, "Filter on ID being less than this value")
-	flagsFindMsm.IntVar(&flags.filterIDlte, "idlte", 0, "Filter on ID being less than or equal to this value")
-	flagsFindMsm.IntVar(&flags.filterIDgt, "idgt", 0, "Filter on ID being greater than this value")
-	flagsFindMsm.IntVar(&flags.filterIDgte, "idgte", 0, "Filter on ID being greater than or equal to this value")
+	flagsFindMsm.UintVar(&flags.filterID, "id", 0, "A particular measurement ID to fetch. If present, all other filters are ignored")
+	flagsFindMsm.UintVar(&flags.filterIDlt, "idlt", 0, "Filter on ID being less than this value")
+	flagsFindMsm.UintVar(&flags.filterIDlte, "idlte", 0, "Filter on ID being less than or equal to this value")
+	flagsFindMsm.UintVar(&flags.filterIDgt, "idgt", 0, "Filter on ID being greater than this value")
+	flagsFindMsm.UintVar(&flags.filterIDgte, "idgte", 0, "Filter on ID being greater than or equal to this value")
 	flagsFindMsm.StringVar(&flags.filterIDin, "idin", "", "Filter on ID being in this comma separated list")
 	flagsFindMsm.StringVar(&flags.filterStartTimeGt, "startgt", "", "Filter on start time (epoch or ISO) after this")
 	flagsFindMsm.StringVar(&flags.filterStartTimeGte, "startgte", "", "Filter on start time (epoch or ISO) at or after this")
@@ -403,11 +403,11 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	flagsFindMsm.StringVar(&flags.filterStopTimeLte, "stoplte", "", "Filter on stop time (epoch or ISO) at or before this")
 	flagsFindMsm.BoolVar(&flags.filterOneoff, "oneoff", false, "Filter for one-off measurements")
 	flagsFindMsm.BoolVar(&flags.filterPeriodic, "periodic", false, "Filter for periodic measurement")
-	flagsFindMsm.IntVar(&flags.filterInterval, "interval", 0, "Filter on interval")
-	flagsFindMsm.IntVar(&flags.filterIntervalGt, "intervalgt", 0, "Filter on interval being greater than this value")
-	flagsFindMsm.IntVar(&flags.filterIntervalGte, "intervalgte", 0, "Filter on interval being greater than or equal to this value")
-	flagsFindMsm.IntVar(&flags.filterIntervalLt, "intervallt", 0, "Filter on interval being less than this value")
-	flagsFindMsm.IntVar(&flags.filterIntervalLte, "intervallte", 0, "Filter on interval being less than or equal to this value")
+	flagsFindMsm.UintVar(&flags.filterInterval, "interval", 0, "Filter on interval")
+	flagsFindMsm.UintVar(&flags.filterIntervalGt, "intervalgt", 0, "Filter on interval being greater than this value")
+	flagsFindMsm.UintVar(&flags.filterIntervalGte, "intervalgte", 0, "Filter on interval being greater than or equal to this value")
+	flagsFindMsm.UintVar(&flags.filterIntervalLt, "intervallt", 0, "Filter on interval being less than this value")
+	flagsFindMsm.UintVar(&flags.filterIntervalLte, "intervallte", 0, "Filter on interval being less than or equal to this value")
 	flagsFindMsm.StringVar(&flags.filterStatus, "status", "any", "Status to filter for: any/spe/sch/ong/stp")
 	flagsFindMsm.StringVar(&flags.filterType, "type", "", "Type to filter for: "+strings.Join(goatapi.MeasurementTypes, ","))
 	flagsFindMsm.StringVar(&flags.filterTags, "tags", "", "Filter tags in this comma separated list")
@@ -420,8 +420,8 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	flagsFindMsm.StringVar(&flags.filterDescHas, "deschas", "", "Filter for description substring")
 	flagsFindMsm.StringVar(&flags.filterDescStarts, "descstarts", "", "Filter for description prefix")
 	flagsFindMsm.StringVar(&flags.filterDescEnds, "descends", "", "Filter for description suffix")
-	flagsFindMsm.IntVar(&flags.filterProbe, "probe", 0, "Filter on ID of a participating probe")
-	flagsFindMsm.IntVar(&flags.filterAddressFamily, "af", 0, "Filter on address family (4 or 6)")
+	flagsFindMsm.UintVar(&flags.filterProbe, "probe", 0, "Filter on ID of a participating probe")
+	flagsFindMsm.UintVar(&flags.filterAddressFamily, "af", 0, "Filter on address family (4 or 6)")
 	flagsFindMsm.StringVar(&flags.filterProtocol, "proto", "", "Filter for protocol (ICMP, UDP, TCP) where it makes sense (i.e. DNS and traceroute)")
 	flagsFindMsm.BoolVar(&flags.filterMy, "my", false, "Filter for 'my' measurements. Requires an API key.")
 
@@ -431,7 +431,7 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	flagsFindMsm.StringVar(&flags.format, "format", "some", "Output contents: one of 'id', 'idcsv', 'some' (default), 'most'")
 
 	// limit
-	flagsFindMsm.IntVar(&flags.limit, "limit", 100, "Maximum amount of measurements to retrieve")
+	flagsFindMsm.UintVar(&flags.limit, "limit", 100, "Maximum amount of measurements to retrieve")
 
 	flagsFindMsm.Parse(args)
 
