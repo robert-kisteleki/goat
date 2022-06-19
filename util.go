@@ -38,9 +38,11 @@ func parseTimeAlternatives(data string) (time.Time, error) {
 	}
 
 	// try parsing ISO8601
-	layout := "2006-01-02T15:04:05"
-	noz := strings.ReplaceAll(data, "Z", "") // Z is optional
-	unix, err := time.Parse(layout, noz)
+	layout := "2006-01-02T15:04:05Z"
+	if !strings.Contains(data, "Z") {
+		data += "Z"
+	}
+	unix, err := time.Parse(layout, data)
 	if err == nil {
 		return unix, nil
 	}
