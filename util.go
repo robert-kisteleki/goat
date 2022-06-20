@@ -28,8 +28,9 @@ func makeIntList(csv string) ([]uint, error) {
 	return idlist, nil
 }
 
-// We allow datetimes to be supplied as UNIX epoch or ISO8601
-// This function parses that into a Time
+// We allow datetimes to be supplied as UNIX epoch or (some short versions of) ISO8601
+// This function parses those into a time.Time
+// With ISO8601: SS, MM:SS and HH:MM:SS are optional and default to 0
 func parseTimeAlternatives(data string) (time.Time, error) {
 	// try parsing as UNIX epoch first
 	epoch, err := strconv.Atoi(data)
@@ -37,16 +38,35 @@ func parseTimeAlternatives(data string) (time.Time, error) {
 		return time.Unix(int64(epoch), 0), nil
 	}
 
-	// try parsing ISO8601
+	var t time.Time
 	layout := "2006-01-02T15:04:05Z"
-	if !strings.Contains(data, "Z") {
-		data += "Z"
-	}
-	unix, err := time.Parse(layout, data)
+	// try parsing variations of (shortened) ISO8601
+	// perhaps there's a nicer way of doing this
+	t, err = time.Parse(layout, data)
 	if err == nil {
-		return unix, nil
+		return t, nil
+	}
+	t, err = time.Parse(layout, data+"Z")
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse(layout, data+":00Z")
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse(layout, data+":00:00Z")
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse(layout, data+"00:00:00Z")
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse(layout, data+"T00:00:00Z")
+	if err == nil {
+		return t, nil
 	}
 
-	// we failed. Return an error; the time can be ignored
-	return time.Now(), fmt.Errorf("could not parse time: %s", data)
+	// we failed. Return an error; the time value can be ignored
+	return time.Now().UTC(), fmt.Errorf("could not parse time: %s", data)
 }
