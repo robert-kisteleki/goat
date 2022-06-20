@@ -133,7 +133,7 @@ func parseResultArgs(args []string) *resultFlags {
 	flagsGetResult.UintVar(&flags.filterID, "id", 0, "The measurement ID to fetch results for. Mandatory.")
 	flagsGetResult.StringVar(&flags.filterStart, "start", "", "Earliest timestamp for results")
 	flagsGetResult.StringVar(&flags.filterStop, "stop", "", "Latest timestamp for results")
-	flagsGetResult.StringVar(&flags.filterProbeIDs, "probe", "", "Filter on probe ID being in this comma separated list")
+	flagsGetResult.StringVar(&flags.filterProbeIDs, "probe", "", "Filter on probe ID being on this comma separated list")
 	flagsFindMsm.BoolVar(&flags.filterAnchors, "anchor", false, "Filter for achors only")
 	flagsFindMsm.BoolVar(&flags.filterPublicProbes, "public", false, "Filter for public probes only")
 
@@ -141,7 +141,7 @@ func parseResultArgs(args []string) *resultFlags {
 	flagsGetResult.StringVar(&flags.format, "format", "some", "Output contents: 'some' or 'most'")
 
 	// limit
-	flagsGetResult.UintVar(&flags.limit, "limit", 100, "Maximum amount of anchors to retrieve")
+	flagsGetResult.UintVar(&flags.limit, "limit", 1000, "Maximum amount of results to parse")
 
 	flagsGetResult.Parse(args)
 
