@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/robert-kisteleki/goatapi"
+	"github.com/robert-kisteleki/goatapi/result"
 	"golang.org/x/exp/slices"
 )
 
@@ -33,24 +34,42 @@ func commandResult(args []string) {
 	flags := parseResultArgs(args)
 	filter, options := processResultFlags(flags)
 
-	// most of the work is done by goatAPI
-	results, err := filter.GetResults(flagVerbose)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-
-	if flagVerbose {
-		fmt.Printf("%d results\n", len(results))
-	}
-
-	for _, result := range results {
-		switch options["format"] {
-		case "some":
-			fmt.Println(result.ShortString())
-		case "most":
-			fmt.Println(result.LongString())
+	// this is left here intentionally as an alternative
+	/*
+		// most of the work is done by goatAPI
+		results, err := filter.GetResults(flagVerbose)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+			os.Exit(1)
 		}
+
+		if flagVerbose {
+			fmt.Printf("%d results\n", len(results))
+		}
+	*/
+
+	// most of the work is done by goatAPI
+	// we receive results as they come in, via a channel
+	results := make(chan result.AsyncResult)
+	go filter.GetResultsAsync(flagVerbose, results)
+
+	total := 0
+	for result := range results {
+		if result.Error != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", result.Error)
+		} else {
+			res := result.Result
+			switch options["format"] {
+			case "some":
+				fmt.Println(res.ShortString())
+			case "most":
+				fmt.Println(res.LongString())
+			}
+			total++
+		}
+	}
+	if flagVerbose {
+		fmt.Printf("%d results\n", total)
 	}
 }
 
