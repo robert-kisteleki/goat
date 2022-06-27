@@ -29,9 +29,19 @@ func makeIntList(csv string) ([]uint, error) {
 }
 
 // We allow datetimes to be supplied as UNIX epoch or (some short versions of) ISO8601
+// or perhaps "today" or "yesterday"
 // This function parses those into a time.Time
 // With ISO8601: SS, MM:SS and HH:MM:SS are optional and default to 0
 func parseTimeAlternatives(data string) (time.Time, error) {
+	if data == "today" {
+		now := time.Now().UTC().Unix()
+		return time.Unix(now-now%86400, 0), nil
+	}
+	if data == "yesterday" {
+		now := time.Now().UTC().Unix()
+		return time.Unix(now-now%86400-86400, 0), nil
+	}
+
 	// try parsing as UNIX epoch first
 	epoch, err := strconv.Atoi(data)
 	if err == nil {
