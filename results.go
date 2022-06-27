@@ -61,9 +61,9 @@ func commandResult(args []string) {
 			res := result.Result
 			switch options["format"] {
 			case "some":
-				fmt.Println(res.ShortString())
+				fmt.Println(res.String())
 			case "most":
-				fmt.Println(res.LongString())
+				fmt.Println(res.DetailString())
 			}
 			total++
 		}
