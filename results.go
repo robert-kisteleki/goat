@@ -18,6 +18,7 @@ import (
 // struct to receive/store command line args for downloads
 type resultFlags struct {
 	filterID           uint
+	filterInfile       string
 	filterStart        string
 	filterStop         string
 	filterProbeIDs     string
@@ -44,13 +45,19 @@ func commandResult(args []string) {
 		}
 
 		if flagVerbose {
-			fmt.Printf("%d results\n", len(results))
+			fmt.Printf("# %d results\n", len(results))
 		}
 	*/
+
+	// if no ID and no file was specified then read from stdin
+	if flags.filterID == 0 && flags.filterInfile == "" {
+		filter.FilterFile("-")
+	}
 
 	// most of the work is done by goatAPI
 	// we receive results as they come in, via a channel
 	results := make(chan result.AsyncResult)
+
 	go filter.GetResultsAsync(flagVerbose, results)
 
 	total := 0
@@ -69,7 +76,7 @@ func commandResult(args []string) {
 		}
 	}
 	if flagVerbose {
-		fmt.Printf("%d results\n", total)
+		fmt.Printf("# %d results\n", total)
 	}
 }
 
@@ -102,9 +109,10 @@ func processResultFlags(flags *resultFlags) (
 
 	if flags.filterID != 0 {
 		filter.FilterID(flags.filterID)
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: measurement ID must be sepcified with --id\n")
-		os.Exit(1)
+	}
+
+	if flags.filterInfile != "" {
+		filter.FilterFile(flags.filterInfile)
 	}
 
 	if flags.filterProbeIDs != "" {
@@ -149,7 +157,8 @@ func parseResultArgs(args []string) *resultFlags {
 	var flags resultFlags
 
 	// filters
-	flagsGetResult.UintVar(&flags.filterID, "id", 0, "The measurement ID to fetch results for. Mandatory.")
+	flagsGetResult.UintVar(&flags.filterID, "id", 0, "The measurement ID to fetch results for.")
+	flagsGetResult.StringVar(&flags.filterInfile, "file", "", "A file to fetch measurement from. Use \"-\" or \"\" for stdin")
 	flagsGetResult.StringVar(&flags.filterStart, "start", "", "Earliest timestamp for results")
 	flagsGetResult.StringVar(&flags.filterStop, "stop", "", "Latest timestamp for results")
 	flagsGetResult.StringVar(&flags.filterProbeIDs, "probe", "", "Filter on probe ID being on this comma separated list")
