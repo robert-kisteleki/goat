@@ -131,7 +131,7 @@ func configure() {
 // readConfig deals with configuration file loading
 func readConfig(confFile string) bool {
 	if flagVerbose {
-		fmt.Println("Attempting to read config file (" + confFile + ")")
+		fmt.Println("# Attempting to read config file (" + confFile + ")")
 	}
 
 	cfg, err := ini.LoadSources(
@@ -164,7 +164,7 @@ func createConfig(confFile string) {
 
 	f, err := os.Create(confFile)
 	if err != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Could not create default config file (%s): %v\n", confFile, err)
+		fmt.Fprintf(os.Stderr, "# Could not create default config file (%s): %v\n", confFile, err)
 		return
 	}
 	defer f.Close()
@@ -187,7 +187,7 @@ list_measurements = ""
 `)
 
 	if flagVerbose {
-		fmt.Fprintf(os.Stderr, "Created default config file (%s)\n", confFile)
+		fmt.Fprintf(os.Stderr, "# Created default config file (%s)\n", confFile)
 	}
 }
 
