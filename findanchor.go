@@ -54,7 +54,7 @@ func commandFindAnchor(args []string) {
 	}
 
 	if flagVerbose {
-		fmt.Printf("%d anchors found\n", len(anchors))
+		fmt.Printf("# %d anchors found\n", len(anchors))
 	}
 
 	// produce output; exact format depends on the "format" option

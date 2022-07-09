@@ -84,7 +84,7 @@ func commandFindProbe(args []string) {
 	}
 
 	if flagVerbose {
-		fmt.Printf("%d probes found\n", len(probes))
+		fmt.Printf("# %d probes found\n", len(probes))
 	}
 
 	// produce output; exact format depends on the "format" option

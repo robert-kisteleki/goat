@@ -89,7 +89,7 @@ func commandFindMsm(args []string) {
 	}
 
 	if flagVerbose {
-		fmt.Printf("%d measurements found\n", len(measurements))
+		fmt.Printf("# %d measurements found\n", len(measurements))
 	}
 
 	// produce output; exact format depends on the "format" option
