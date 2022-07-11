@@ -8,11 +8,11 @@ package main
 
 import (
 	"fmt"
+	"goatcli/output"
 	"os"
 
 	"github.com/robert-kisteleki/goatapi"
 	"github.com/robert-kisteleki/goatapi/result"
-	"golang.org/x/exp/slices"
 )
 
 // struct to receive/store command line args for downloads
@@ -24,8 +24,9 @@ type resultFlags struct {
 	filterProbeIDs     string
 	filterAnchors      bool
 	filterPublicProbes bool
+	filterLatest       bool
 
-	format string
+	output string // output formater
 	limit  uint
 }
 
@@ -34,6 +35,13 @@ type resultFlags struct {
 func commandResult(args []string) {
 	flags := parseResultArgs(args)
 	filter, options := processResultFlags(flags)
+
+	formatter := options["output"].(string)
+
+	if !output.Verify(formatter) {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+		os.Exit(1)
+	}
 
 	// this is left here intentionally as an alternative
 	/*
@@ -57,27 +65,17 @@ func commandResult(args []string) {
 	// most of the work is done by goatAPI
 	// we receive results as they come in, via a channel
 	results := make(chan result.AsyncResult)
-
 	go filter.GetResultsAsync(flagVerbose, results)
 
-	total := 0
+	output.Setup(formatter, flagVerbose)
 	for result := range results {
 		if result.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %s\n", result.Error)
 		} else {
-			res := result.Result
-			switch options["format"] {
-			case "some":
-				fmt.Println(res.String())
-			case "most":
-				fmt.Println(res.DetailString())
-			}
-			total++
+			output.Process(formatter, result.Result)
 		}
 	}
-	if flagVerbose {
-		fmt.Printf("# %d results\n", total)
-	}
+	output.Finish(formatter)
 }
 
 // Process flags (filters & options), pass most of them on to goatAPI
@@ -91,13 +89,8 @@ func processResultFlags(flags *resultFlags) (
 
 	// options
 
-	formats := []string{"some", "most"}
-	if slices.Contains(formats, flags.format) {
-		options["format"] = flags.format
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: invalid output format\n")
-		os.Exit(1)
-	}
+	options["output"] = flags.output
+
 	if flags.limit == 0 {
 		fmt.Fprintf(os.Stderr, "ERROR: limit should be positive\n")
 		os.Exit(1)
@@ -148,6 +141,9 @@ func processResultFlags(flags *resultFlags) (
 	if flags.filterPublicProbes {
 		filter.FilterPublicProbes()
 	}
+	if flags.filterLatest {
+		filter.FilterLatest()
+	}
 
 	return
 }
@@ -162,11 +158,12 @@ func parseResultArgs(args []string) *resultFlags {
 	flagsGetResult.StringVar(&flags.filterStart, "start", "", "Earliest timestamp for results")
 	flagsGetResult.StringVar(&flags.filterStop, "stop", "", "Latest timestamp for results")
 	flagsGetResult.StringVar(&flags.filterProbeIDs, "probe", "", "Filter on probe ID being on this comma separated list")
-	flagsFindMsm.BoolVar(&flags.filterAnchors, "anchor", false, "Filter for achors only")
-	flagsFindMsm.BoolVar(&flags.filterPublicProbes, "public", false, "Filter for public probes only")
+	flagsGetResult.BoolVar(&flags.filterAnchors, "anchor", false, "Filter for achors only")
+	flagsGetResult.BoolVar(&flags.filterPublicProbes, "public", false, "Filter for public probes only")
+	flagsGetResult.BoolVar(&flags.filterLatest, "latest", false, "Filter for latest results only")
 
 	// options
-	flagsGetResult.StringVar(&flags.format, "format", "some", "Output contents: 'some' or 'most'")
+	flagsGetResult.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most' or other available plugins")
 
 	// limit
 	flagsGetResult.UintVar(&flags.limit, "limit", 1000, "Maximum amount of results to parse")

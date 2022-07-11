@@ -1,0 +1,92 @@
+/*
+  (C) 2022 Robert Kisteleki & RIPE NCC
+
+  See LICENSE file for the license.
+*/
+
+/*
+  Defines the basics of how output formatters work. Each has:
+    * a name selected with "--output"
+	* a setup() function to init whatever variables it needs
+	* a process() function to deal with one incoming result
+	* a finish() function to do something at the end of processing,
+	  likely produce actualy output, a summary or such
+
+  When adding a new output formatter, don't forget to Register() it in init()
+*/
+
+package output
+
+import (
+	"fmt"
+
+	"github.com/robert-kisteleki/goatapi/result"
+)
+
+type outform struct {
+	format  string
+	setup   func()
+	process func(result.Result)
+	finish  func()
+}
+
+var formats map[string]outform
+var verbose bool // remember if verbose output was asked
+var total uint   // total number of results processed
+
+// package init
+func init() {
+	formats = make(map[string]outform, 0)
+
+	Register("some", someSetup, someProcess, someFinish)
+	Register("most", mostSetup, mostProcess, mostFinish)
+	Register("dnsstat", dnsstatSetup, dnsstatProcess, dnsstatFinish)
+}
+
+// Register a new output formatter with a name and th needed functions
+func Register(
+	format string,
+	setup func(),
+	process func(result.Result),
+	finish func(),
+) {
+	formats[format] = outform{format, setup, process, finish}
+}
+
+// Verify check is a particular formatter has been defined
+func Verify(format string) bool {
+	_, ok := formats[format]
+	return ok
+}
+
+// Setup is called before any results are processed
+func Setup(format string, isverbose bool) {
+	verbose = isverbose
+	if formatter, ok := formats[format]; ok {
+		formatter.setup()
+	} else {
+		// this should not happen - as long as VerifyFormatter was properly used
+		panic(fmt.Sprintf("Unknown formatter %s was called\n", format))
+	}
+}
+
+// Process one incoming result
+func Process(format string, result result.Result) {
+	total++
+	if formatter, ok := formats[format]; ok {
+		formatter.process(result)
+	} else {
+		// this should not happen - as long as VerifyFormatter was properly used
+		panic(fmt.Sprintf("Unknown formatter %s was called\n", format))
+	}
+}
+
+// Finish is called after all results are processed
+func Finish(format string) {
+	if formatter, ok := formats[format]; ok {
+		formatter.finish()
+	} else {
+		// this should not happen - as long as VerifyFormatter was properly used
+		panic(fmt.Sprintf("Unknown formatter %s was called\n", format))
+	}
+}
