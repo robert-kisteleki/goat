@@ -249,8 +249,7 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 		filter.FilterPrefixV6(prefix)
 	}
 
-	switch flags.filterStatus {
-	case "":
+	switch strings.ToUpper(flags.filterStatus) {
 	case "N":
 		filter.FilterStatus(goatapi.ProbeStatusNeverConnected)
 	case "C":
