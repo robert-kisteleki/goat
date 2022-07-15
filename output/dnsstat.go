@@ -41,7 +41,7 @@ func dnsstatProcess(res result.Result) {
 			default: // for the rest: extract "useful data"
 				set := make([]string, 0)
 				for _, ans := range resp.Answer {
-					s := strings.Split(ans.DetailString(), "\t")
+					s := strings.Split(mostOutputDnsAnswer(&ans), "\t")
 					var r string
 					if len(s) > 4 {
 						r = strings.ReplaceAll(s[4], "'", "")
