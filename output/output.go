@@ -40,6 +40,7 @@ func init() {
 
 	Register("some", someSetup, someProcess, someFinish)
 	Register("most", mostSetup, mostProcess, mostFinish)
+	Register("native", nativeSetup, nativeProcess, nativeFinish)
 	Register("dnsstat", dnsstatSetup, dnsstatProcess, dnsstatFinish)
 }
 
