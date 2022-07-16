@@ -8,7 +8,7 @@
   Defines the "dnsstat" output formatter. It is pretty naive but shows potential.
 */
 
-package output
+package dnsstat
 
 import (
 	"fmt"
@@ -18,13 +18,18 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var verbose bool
+var total uint
 var dnsstatcollector map[string]uint
 
-func dnsstatSetup() {
+func Setup(isverbose bool) {
+	verbose = isverbose
 	dnsstatcollector = make(map[string]uint)
 }
 
-func dnsstatProcess(res result.Result) {
+func Process(res result.Result) {
+	total++
+
 	dns := res.(*result.DnsResult)
 	var key string
 
@@ -41,7 +46,7 @@ func dnsstatProcess(res result.Result) {
 			default: // for the rest: extract "useful data"
 				set := make([]string, 0)
 				for _, ans := range resp.Answer {
-					s := strings.Split(mostOutputDnsAnswer(&ans), "\t")
+					s := strings.Split(ans.Data, "\t")
 					var r string
 					if len(s) > 4 {
 						r = strings.ReplaceAll(s[4], "'", "")
@@ -58,7 +63,7 @@ func dnsstatProcess(res result.Result) {
 	}
 }
 
-func dnsstatFinish() {
+func Finish() {
 	var anssum uint = 0
 	for k, v := range dnsstatcollector {
 		fmt.Printf("%d\t\"%s\"\n", v, k)

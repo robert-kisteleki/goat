@@ -8,18 +8,26 @@
   Defines the "some" and "most" output formatters.
 */
 
-package output
+package most
 
 import (
 	"fmt"
+	"goatcli/output/some"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
 )
 
-func mostSetup() {}
+var verbose bool
+var total uint
 
-func mostProcess(res result.Result) {
+func Setup(isverbose bool) {
+	verbose = isverbose
+}
+
+func Process(res result.Result) {
+	total++
+
 	switch r := res.(type) {
 	case *result.PingResult:
 		fmt.Println(mostOutputPing(r))
@@ -40,14 +48,18 @@ func mostProcess(res result.Result) {
 	}
 }
 
-func mostFinish() {
+func Finish() {
 	if verbose {
 		fmt.Printf("# %d results\n", total)
 	}
 }
 
 func mostOutputPing(res *result.PingResult) string {
-	return someOutputPing(res) +
+	return some.SomeOutputPing(res) +
+		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f/%f",
+			res.Sent, res.Received, res.Duplicates,
+			res.Minimum, res.Average, res.Median, res.Maximum,
+		) +
 		fmt.Sprintf("\t%s\t%v", res.Protocol, res.ReplyRtts())
 }
 
@@ -56,7 +68,8 @@ func mostOutputDns(res *result.DnsResult) string {
 	for _, detail := range res.Responses {
 		s = append(s, mostOutputDnsResponse(&detail))
 	}
-	return someOutputDns(res) + "\t[" + strings.Join(s, " ") + "]"
+	return some.SomeOutputDns(res) +
+		"\t[" + strings.Join(s, " ") + "]"
 }
 
 func mostOutputDnsResponse(resp *result.DnsResponse) string {
@@ -93,12 +106,12 @@ func mostOutputDnsResponseDetail(resp *result.DnsResponse) string {
 }
 
 func mostOutputTraceroute(res *result.TracerouteResult) string {
-	return someOutputTraceroute(res) +
+	return some.SomeOutputTraceroute(res) +
 		fmt.Sprintf("\t%v\t%d", res.DestinationReached(), res.ParisID)
 }
 
 func mostOutputCert(res *result.CertResult) string {
-	ret := someOutputCert(res)
+	ret := some.SomeOutputCert(res)
 	if res.Alert == nil && res.Error == nil {
 		ret += fmt.Sprintf("\t%s", res.ServerCipher)
 	}
@@ -114,7 +127,7 @@ func mostOutputCert(res *result.CertResult) string {
 }
 
 func mostOutputHttp(res *result.HttpResult) string {
-	return someOutputHttp(res) +
+	return some.SomeOutputHttp(res) +
 		fmt.Sprintf("\t\"%s\"\t%s\t%d\t%d\t%d",
 			res.Error,
 			res.Method,
@@ -125,14 +138,15 @@ func mostOutputHttp(res *result.HttpResult) string {
 }
 
 func mostOutputNtp(res *result.NtpResult) string {
-	return someOutputNtp(res) +
+	return some.SomeOutputNtp(res) +
 		fmt.Sprintf("\t%s\t%v", res.Protocol, res.Replies)
 }
 
 func mostOutputConnection(res *result.ConnectionResult) string {
-	return someOutputConnection(res) + fmt.Sprintf("\t%d\t%v", res.Asn, res.Prefix)
+	return some.SomeOutputConnection(res) +
+		fmt.Sprintf("\t%d\t%v", res.Asn, res.Prefix)
 }
 
 func mostOutputUptime(res *result.UptimeResult) string {
-	return someOutputUptime(res)
+	return some.SomeOutputUptime(res)
 }

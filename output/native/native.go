@@ -10,7 +10,7 @@
   tools, e.g. ping, traceroute, dig and so on.
 */
 
-package output
+package native
 
 import (
 	"fmt"
@@ -18,9 +18,16 @@ import (
 	"github.com/robert-kisteleki/goatapi/result"
 )
 
-func nativeSetup() {}
+var verbose bool
+var total uint
 
-func nativeProcess(res result.Result) {
+func Setup(isverbose bool) {
+	verbose = isverbose
+}
+
+func Process(res result.Result) {
+	total++
+
 	switch r := res.(type) {
 	case *result.PingResult:
 		nativeOutputPing(r)
@@ -37,7 +44,7 @@ func nativeProcess(res result.Result) {
 	}
 }
 
-func nativeFinish() {
+func Finish() {
 	if verbose {
 		fmt.Printf("# %d results\n", total)
 	}

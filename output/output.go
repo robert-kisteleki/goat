@@ -20,34 +20,37 @@ package output
 import (
 	"fmt"
 
+	"goatcli/output/dnsstat"
+	"goatcli/output/most"
+	"goatcli/output/native"
+	"goatcli/output/some"
+
 	"github.com/robert-kisteleki/goatapi/result"
 )
 
 type outform struct {
 	format  string
-	setup   func()
+	setup   func(bool)
 	process func(result.Result)
 	finish  func()
 }
 
 var formats map[string]outform
-var verbose bool // remember if verbose output was asked
-var total uint   // total number of results processed
 
 // package init
 func init() {
 	formats = make(map[string]outform, 0)
 
-	Register("some", someSetup, someProcess, someFinish)
-	Register("most", mostSetup, mostProcess, mostFinish)
-	Register("native", nativeSetup, nativeProcess, nativeFinish)
-	Register("dnsstat", dnsstatSetup, dnsstatProcess, dnsstatFinish)
+	Register("some", some.Setup, some.Process, some.Finish)
+	Register("most", most.Setup, most.Process, most.Finish)
+	Register("native", native.Setup, native.Process, native.Finish)
+	Register("dnsstat", dnsstat.Setup, dnsstat.Process, dnsstat.Finish)
 }
 
 // Register a new output formatter with a name and th needed functions
 func Register(
 	format string,
-	setup func(),
+	setup func(bool),
 	process func(result.Result),
 	finish func(),
 ) {
@@ -62,9 +65,8 @@ func Verify(format string) bool {
 
 // Setup is called before any results are processed
 func Setup(format string, isverbose bool) {
-	verbose = isverbose
 	if formatter, ok := formats[format]; ok {
-		formatter.setup()
+		formatter.setup(isverbose)
 	} else {
 		// this should not happen - as long as VerifyFormatter was properly used
 		panic(fmt.Sprintf("Unknown formatter %s was called\n", format))
@@ -73,7 +75,6 @@ func Setup(format string, isverbose bool) {
 
 // Process one incoming result
 func Process(format string, result result.Result) {
-	total++
 	if formatter, ok := formats[format]; ok {
 		formatter.process(result)
 	} else {
