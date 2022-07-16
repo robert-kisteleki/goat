@@ -24,10 +24,8 @@ func nativeProcess(res result.Result) {
 	switch r := res.(type) {
 	case *result.PingResult:
 		nativeOutputPing(r)
-	/*
-		case *result.TracerouteResult:
-			nativeOutputTraceroute(r)
-	*/
+	case *result.TracerouteResult:
+		nativeOutputTraceroute(r)
 	/*
 		case *result.DnsResult:
 			nativeOutputDns(r)
@@ -77,11 +75,44 @@ func nativeOutputPing(res *result.PingResult) {
 	fmt.Println()
 }
 
-/*
 func nativeOutputTraceroute(res *result.TracerouteResult) {
-
+	fmt.Printf("PROBE %d traceroute to %s (%v): %d hops max, %d byte packets\n",
+		res.ProbeID,
+		res.Destination(),
+		res.DestinationAddr,
+		255,
+		res.PacketSize,
+	)
+	for _, hop := range res.Hops {
+		last := ""
+		for i, ans := range hop.Responses {
+			if i == 0 {
+				fmt.Printf("%3d  ", hop.HopNumber)
+			}
+			if ans.Timeout {
+				fmt.Printf("*")
+			} else {
+				if last != ans.From.String() {
+					if last != "" {
+						fmt.Printf("\n     ")
+					}
+					fmt.Printf("%s (%s)", ans.From, ans.From)
+				}
+				if ans.Late != nil {
+					fmt.Printf(" LATE")
+				} else {
+					fmt.Printf(" %.3f ms", ans.Rtt)
+				}
+				last = ans.From.String()
+			}
+			if i != len(hop.Responses)-1 {
+				fmt.Printf(" ")
+			} else {
+				fmt.Println()
+			}
+		}
+	}
 }
-*/
 
 /*
 func nativeOutputDns(res *result.DnsResult) {
