@@ -9,8 +9,7 @@
     * a name selected with "--output"
 	* a setup() function to init whatever variables it needs
 	* a process() function to deal with one incoming result
-	* a finish() function to do something at the end of processing,
-	  likely produce actualy output, a summary or such
+	* a finish() function to do something at the end of result processing
 
   When adding a new output formatter, don't forget to Register() it in init()
 */
