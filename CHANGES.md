@@ -8,6 +8,7 @@
 * NEW: support for processing results from an already downloaded file
 * NEW: preliminary support for output processors
 * CHANGED: minor verbose output format changes
+* CHANGED: output for "some" and "most" moved here from goatAPI
 
 ## v0.1.0
 
