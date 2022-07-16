@@ -309,6 +309,10 @@ func parseFindMsmFlags(flags *findMsmFlags) (
 	}
 
 	if flags.filterType != "" {
+		if flags.filterType == "trace" {
+			// allow "trace" a shorthand for "traceroute"
+			flags.filterType = "traceroute"
+		}
 		if !goatapi.ValidMeasurementType(flags.filterType) {
 			fmt.Fprintf(os.Stderr, "ERROR: invalid type: %s\n", flags.filterType)
 			os.Exit(1)
