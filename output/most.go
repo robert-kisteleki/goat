@@ -11,7 +11,6 @@
 package output
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -94,10 +93,8 @@ func mostOutputDnsResponseDetail(resp *result.DnsResponse) string {
 }
 
 func mostOutputTraceroute(res *result.TracerouteResult) string {
-	//	return result.String() +
-	//		fmt.Sprintf("\t%d", result.ParisID)
-	j, _ := json.Marshal(res)
-	return string(j)
+	return someOutputTraceroute(res) +
+		fmt.Sprintf("\t%v\t%d", res.DestinationReached(), res.ParisID)
 }
 
 func mostOutputCert(res *result.CertResult) string {
