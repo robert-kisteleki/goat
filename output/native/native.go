@@ -68,10 +68,14 @@ func nativeOutputPing(res *result.PingResult) {
 		)
 	}
 	fmt.Printf("--- %s ping statistics ---\n", res.DestinationName)
+	loss := 1.0
+	if res.Received != 0 {
+		loss = 100.0 - float64(res.Sent/res.Received)*100
+	}
 	fmt.Printf("%d packets transmitted, %d packets received, %.1f%% packet loss\n",
 		res.Sent,
 		res.Received,
-		100.0-float32(res.Sent/res.Received)*100,
+		loss,
 	)
 	fmt.Printf("round-trip min/avg/med/max = %.3f/%.3f/%.3f/%.3f ms\n",
 		res.Minimum,
