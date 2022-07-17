@@ -35,7 +35,7 @@ var (
 	apiKeys map[string]uuid.UUID // collected from config file
 )
 
-const version = "v0.2.0-dev"
+const version = "v0.2.0"
 const CLIName = "goatCLI " + version
 
 var defaultConfigDir = os.Getenv("HOME") + "/.config"
