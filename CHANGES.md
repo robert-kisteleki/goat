@@ -7,6 +7,9 @@
   * with option to get "latest" only
 * NEW: support for processing results from an already downloaded file
 * NEW: preliminary support for output processors
+  * some, most: basic properties of the results
+  * native: a native-looking output (i.e. similar to ping, traceroute, ...)
+  * dnsstat: a simple DNS result summariser
 * CHANGED: minor verbose output format changes
 * CHANGED: output for "some" and "most" moved here from goatAPI
 

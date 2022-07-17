@@ -6,6 +6,9 @@ It supports:
 * finding probes
 * finding anchors
 * finding measurements
+* downloading and displaying results of measurements and turning them into Go objects
+* loading a local file containing measurement results and turning them into Go objects
+* various kinds of output formatters for displaying and aggregating measurement results
 * (more features to come)
 
 The tool needs Go 1.18 to compile.
@@ -25,14 +28,14 @@ be run by any user.
 
 ### Count Probes Matching Some Criteria
 
-```
+```sh
 $ ./goatcli findprobe --sort -id -cc NL --status C --count
 575
 ```
 
 ### Search for Probes
 
-```
+```sh
 $ ./goatcli findprobe --sort -id -cc NL --status C --limit 5
 1004258	Connected	"NL" N/A	AS44103 N/A	[4.8995 52.3815]
 1004216	Connected	"NL" N/A	AS204995 N/A	[4.6675 52.3905]
@@ -44,7 +47,7 @@ $ ./goatcli findprobe --sort -id -cc NL --status C --limit 5
 
 ### Get a Particular Probe
 
-```
+```sh
 $ ./goatcli findprobe --id 10001
 10001	Connected	"NL" N/A	AS206238	AS206238	[4.9275 52.3475]
 ```
@@ -53,14 +56,14 @@ $ ./goatcli findprobe --id 10001
 
 ### Count Anchors Matching Some Criteria
 
-```
+```sh
 $ ./goatcli findanchor --asn4 3320 --count
 5
 ```
 
 ### Search for Anchors
 
-```
+```sh
 $ ./goatcli findanchor --asn4 3320
 2899	7040	AT	Vienna	at-vie-as3320.anchors.atlas.ripe.net	AS3320	AS3320	[16.392002 48.193092]
 3042	7075	DE	Berlin	de-ber-as3320-client.anchors.atlas.ripe.net	AS3320	AS3320	[13.422857 52.54575]
@@ -72,7 +75,7 @@ $ ./goatcli findanchor --asn4 3320
 
 ### Get a Particular Anchor
 
-```
+```sh
 $ ./goatcli findanchor --id 2899
 2899	7040	AT	Vienna	at-vie-as3320.anchors.atlas.ripe.net	AS3320	AS3320	[16.392002 48.193092]
 ```
@@ -81,7 +84,7 @@ $ ./goatcli findanchor --id 2899
 
 ### Count Measurements Matching Some Criteria
 
-```
+```sh
 $ ./goatcli findmsm --target 193.0.0.0/19 --status ong --count
 165
 $ ./goatcli findmsm --target 193.0.0.0/19 --status ong --type ping --count
@@ -90,7 +93,7 @@ $ ./goatcli findmsm --target 193.0.0.0/19 --status ong --type ping --count
 
 ### Search for Measurements
 
-```
+```sh
 $ ./goatcli findmsm --target 193.0.0.0/19 --status ong --type ping --limit 5
 34680813	Ongoing	Periodic	IPv4	2021-12-30T14:23:04Z N/A	900	27	ping	k.root-servers.net
 29493618	Ongoing	Periodic	IPv4	2021-04-06T17:13:13Z N/A	240	5	ping	ripe.net
@@ -101,18 +104,47 @@ $ ./goatcli findmsm --target 193.0.0.0/19 --status ong --type ping --limit 5
 
 ### Get a Particular Measurement
 
-```
+```sh
 $ ./goatcli findmsm --id 34680813
 34680813	Ongoing	Periodic	IPv4	2021-12-30T14:23:04Z N/A	900	27	ping	k.root-servers.net
 ```
+
+## Processing results
+
+goatCLI can fetch results of exiting measurements (either from the API or from a local file). It's possible to choose what kind of output you want via output formatters:
+* "some" and "most" echo some basic properties of the results
+* "native" produces native-looking outputs (for now for ping and traceroute)
+* "dnsstat" provides basic statistics of DNS results
+
+The API call variant supports setting the start time, end time, probe id(s), and a few more filters.
+
+Basic usage:
+
+```sh
+$ ./goatcli result --id 1001 --probe 10001 --start today --output most
+```
+
+Or perhaps:
+
+```sh
+$ cat some-results.jsonl | ./goatcli result
+```
+
+Loading results from a file expects one result per line ("format=txt" a.k.a. JSONL)
+
+The output formatters are extensible, feel free to write your own -- and conntribute that back to this repo! You only need to make a new package under `output` that implements three functions:
+* `setup()` to prepare for processing results
+* `process()` to deal with one incoming result
+* `finish()` to finish processing, make a summary, etc.
+
+New output processors need to be registered in `output.go`. See `some.go` or `native.go` for examples.
 
 # Future Additions / TODO
 
 * schedule a new measurement, stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
-* fetch results for, or listen to real-time result stream of, an already scheduled measurement
+* listen to real-time result stream of an already scheduled measurement
 * check credit balance, transfer credits, ...
-
 
 # Copyright, Contributing
 
