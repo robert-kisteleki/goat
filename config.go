@@ -29,12 +29,13 @@ var (
 	flagsFindProbe  *flag.FlagSet
 	flagsFindAnchor *flag.FlagSet
 	flagsFindMsm    *flag.FlagSet
+	flagsGetResult  *flag.FlagSet
 
 	apiKey  *uuid.UUID           // specified on the command line explicitly or via env
 	apiKeys map[string]uuid.UUID // collected from config file
 )
 
-const version = "v0.1.0"
+const version = "v0.2.0"
 const CLIName = "goatCLI " + version
 
 var defaultConfigDir = os.Getenv("HOME") + "/.config"
@@ -87,6 +88,7 @@ func printUsage() {
 	fmt.Println("	fp|findprobe     search for probes")
 	fmt.Println("	fa|findanchor    search for achors")
 	fmt.Println("	fm|findmsm       search for measurements")
+	fmt.Println("	result           download results")
 	fmt.Println("")
 	fmt.Println("Options:")
 	flag.PrintDefaults()
@@ -98,12 +100,14 @@ func configure() {
 	flagsFindProbe = flag.NewFlagSet("probe", flag.ExitOnError)
 	flagsFindAnchor = flag.NewFlagSet("anchor", flag.ExitOnError)
 	flagsFindMsm = flag.NewFlagSet("measurement", flag.ExitOnError)
+	flagsGetResult = flag.NewFlagSet("result", flag.ExitOnError)
 
 	Subcommands = map[string]*flag.FlagSet{
 		flagsVersion.Name():    flagsVersion,
 		flagsFindProbe.Name():  flagsFindProbe,
 		flagsFindAnchor.Name(): flagsFindAnchor,
 		flagsFindMsm.Name():    flagsFindMsm,
+		flagsGetResult.Name():  flagsGetResult,
 	}
 	setupFlags()
 
@@ -127,7 +131,7 @@ func configure() {
 // readConfig deals with configuration file loading
 func readConfig(confFile string) bool {
 	if flagVerbose {
-		fmt.Println("Attempting to read config file (" + confFile + ")")
+		fmt.Println("# Attempting to read config file (" + confFile + ")")
 	}
 
 	cfg, err := ini.LoadSources(
@@ -160,7 +164,7 @@ func createConfig(confFile string) {
 
 	f, err := os.Create(confFile)
 	if err != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Could not create default config file (%s): %v\n", confFile, err)
+		fmt.Fprintf(os.Stderr, "# Could not create default config file (%s): %v\n", confFile, err)
 		return
 	}
 	defer f.Close()
@@ -183,7 +187,7 @@ list_measurements = ""
 `)
 
 	if flagVerbose {
-		fmt.Fprintf(os.Stderr, "Created default config file (%s)\n", confFile)
+		fmt.Fprintf(os.Stderr, "# Created default config file (%s)\n", confFile)
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 	"fmt"
 )
 
-// Figure out which subsommand was requested
+// Figure out which subcommand was requested
 func commandSelector() {
 	args := flag.Args()
 
@@ -31,6 +31,8 @@ func commandSelector() {
 		commandFindAnchor(args[1:])
 	case args[0] == "findmsm" || args[0] == "fm":
 		commandFindMsm(args[1:])
+	case args[0] == "result":
+		commandResult(args[1:])
 	default:
 		commandHelp()
 	}

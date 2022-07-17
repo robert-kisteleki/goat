@@ -19,16 +19,16 @@ import (
 
 // struct to receive/store command line args for probe filtering
 type findProbeFlags struct {
-	filterID        int
+	filterID        uint
 	filterIDin      string
-	filterIDgt      int
-	filterIDgte     int
-	filterIDlt      int
-	filterIDlte     int
-	filterASN       int
-	filterASN4      int
+	filterIDgt      uint
+	filterIDgte     uint
+	filterIDlt      uint
+	filterIDlte     uint
+	filterASN       uint
+	filterASN4      uint
 	filterASN4in    string
-	filterASN6      int
+	filterASN6      uint
 	filterASN6in    string
 	filterCC        string
 	filterCCin      string
@@ -54,7 +54,7 @@ type findProbeFlags struct {
 
 	format string
 	sort   string
-	limit  int
+	limit  uint
 	count  bool
 }
 
@@ -84,7 +84,7 @@ func commandFindProbe(args []string) {
 	}
 
 	if flagVerbose {
-		fmt.Printf("%d probes found\n", len(probes))
+		fmt.Printf("# %d probes found\n", len(probes))
 	}
 
 	// produce output; exact format depends on the "format" option
@@ -109,7 +109,7 @@ func commandFindProbe(args []string) {
 // Process flags (filters & options), pass most of them on to goatAPI
 // while doing sanity checks on values
 func parseFindProbeFlags(flags *findProbeFlags) (
-	filter goatapi.ProbeFilter,
+	filter *goatapi.ProbeFilter,
 	options map[string]any,
 ) {
 	options = make(map[string]any)
@@ -249,8 +249,7 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 		filter.FilterPrefixV6(prefix)
 	}
 
-	switch flags.filterStatus {
-	case "":
+	switch strings.ToUpper(flags.filterStatus) {
 	case "N":
 		filter.FilterStatus(goatapi.ProbeStatusNeverConnected)
 	case "C":
@@ -309,16 +308,16 @@ func parseFindProbeArgs(args []string) *findProbeFlags {
 	var flags findProbeFlags
 
 	// filters
-	flagsFindProbe.IntVar(&flags.filterID, "id", 0, "A particular probe ID to fetch. If present, all other filters are ignored")
-	flagsFindProbe.IntVar(&flags.filterIDlt, "idlt", 0, "Filter on ID being less than this value")
-	flagsFindProbe.IntVar(&flags.filterIDlte, "idlte", 0, "Filter on ID being less than or equal to this value")
-	flagsFindProbe.IntVar(&flags.filterIDgt, "idgt", 0, "Filter on ID being greater than this value")
-	flagsFindProbe.IntVar(&flags.filterIDgte, "idgte", 0, "Filter on ID being greater than or equal to this value")
+	flagsFindProbe.UintVar(&flags.filterID, "id", 0, "A particular probe ID to fetch. If present, all other filters are ignored")
+	flagsFindProbe.UintVar(&flags.filterIDlt, "idlt", 0, "Filter on ID being less than this value")
+	flagsFindProbe.UintVar(&flags.filterIDlte, "idlte", 0, "Filter on ID being less than or equal to this value")
+	flagsFindProbe.UintVar(&flags.filterIDgt, "idgt", 0, "Filter on ID being greater than this value")
+	flagsFindProbe.UintVar(&flags.filterIDgte, "idgte", 0, "Filter on ID being greater than or equal to this value")
 	flagsFindProbe.StringVar(&flags.filterIDin, "idin", "", "Filter on ID being in this comma separated list")
-	flagsFindProbe.IntVar(&flags.filterASN, "asn", 0, "Filter for probes with an IPv4 or IPv6 address announced by ths AS")
-	flagsFindProbe.IntVar(&flags.filterASN4, "asn4", 0, "Filter for probes with an IPv4 address announced by ths AS")
+	flagsFindProbe.UintVar(&flags.filterASN, "asn", 0, "Filter for probes with an IPv4 or IPv6 address announced by ths AS")
+	flagsFindProbe.UintVar(&flags.filterASN4, "asn4", 0, "Filter for probes with an IPv4 address announced by ths AS")
 	flagsFindProbe.StringVar(&flags.filterASN4in, "asn4in", "", "Filter on ASN4 being in this comma separated list")
-	flagsFindProbe.IntVar(&flags.filterASN6, "asn6", 0, "Filter for probes with an IPv6 address announced by ths AS")
+	flagsFindProbe.UintVar(&flags.filterASN6, "asn6", 0, "Filter for probes with an IPv6 address announced by ths AS")
 	flagsFindProbe.StringVar(&flags.filterASN6in, "asn6in", "", "Filter on ASN6 being in this comma separated list")
 	flagsFindProbe.StringVar(&flags.filterCC, "cc", "", "Filter for country code (2 letter ISO-3166 alpha-2)")
 	flagsFindProbe.StringVar(&flags.filterCCin, "ccin", "", "Filter for country code (2 letter ISO-3166 alpha-2) in this comma separated list")
@@ -348,7 +347,7 @@ func parseFindProbeArgs(args []string) *findProbeFlags {
 	flagsFindProbe.StringVar(&flags.format, "format", "some", "Output contents: one of 'id', 'idcsv', 'some', 'most'")
 
 	// limit
-	flagsFindProbe.IntVar(&flags.limit, "limit", 100, "Maximum amount of probes to retrieve")
+	flagsFindProbe.UintVar(&flags.limit, "limit", 100, "Maximum amount of probes to retrieve")
 
 	flagsFindProbe.Parse(args)
 

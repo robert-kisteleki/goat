@@ -17,14 +17,14 @@ import (
 
 // struct to receive/store command line args for anchor filtering
 type findAnchorFlags struct {
-	filterID     int
-	filterASN4   int
-	filterASN6   int
+	filterID     uint
+	filterASN4   uint
+	filterASN6   uint
 	filterCC     string
 	filterSearch string
 
 	format string
-	limit  int
+	limit  uint
 	count  bool
 }
 
@@ -54,7 +54,7 @@ func commandFindAnchor(args []string) {
 	}
 
 	if flagVerbose {
-		fmt.Printf("%d anchors found\n", len(anchors))
+		fmt.Printf("# %d anchors found\n", len(anchors))
 	}
 
 	// produce output; exact format depends on the "format" option
@@ -140,9 +140,9 @@ func parseFindAnchorArgs(args []string) *findAnchorFlags {
 	var flags findAnchorFlags
 
 	// filters
-	flagsFindAnchor.IntVar(&flags.filterID, "id", 0, "A particular probe ID to fetch. If present, all other filters are ignored")
-	flagsFindAnchor.IntVar(&flags.filterASN4, "asn4", 0, "Filter for probes with an IPv4 address announced by ths AS")
-	flagsFindAnchor.IntVar(&flags.filterASN6, "asn6", 0, "Filter for probes with an IPv6 address announced by ths AS")
+	flagsFindAnchor.UintVar(&flags.filterID, "id", 0, "A particular probe ID to fetch. If present, all other filters are ignored")
+	flagsFindAnchor.UintVar(&flags.filterASN4, "asn4", 0, "Filter for probes with an IPv4 address announced by ths AS")
+	flagsFindAnchor.UintVar(&flags.filterASN6, "asn6", 0, "Filter for probes with an IPv6 address announced by ths AS")
 	flagsFindAnchor.StringVar(&flags.filterCC, "cc", "", "Filter for country code (2 letter ISO-3166 alpha-2)")
 	flagsFindAnchor.StringVar(&flags.filterSearch, "search", "", "Filter for string in city, company or FQDN")
 
@@ -151,7 +151,7 @@ func parseFindAnchorArgs(args []string) *findAnchorFlags {
 	flagsFindAnchor.StringVar(&flags.format, "format", "some", "Output contents: one of 'id', 'idcsv', 'some' (default), 'most'")
 
 	// limit
-	flagsFindAnchor.IntVar(&flags.limit, "limit", 100, "Maximum amount of anchors to retrieve")
+	flagsFindAnchor.UintVar(&flags.limit, "limit", 100, "Maximum amount of anchors to retrieve")
 
 	flagsFindAnchor.Parse(args)
 
