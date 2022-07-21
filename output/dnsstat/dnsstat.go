@@ -12,6 +12,7 @@ package dnsstat
 
 import (
 	"fmt"
+	"goatcli/output"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
@@ -22,12 +23,16 @@ var verbose bool
 var total uint
 var dnsstatcollector map[string]uint
 
-func Setup(isverbose bool) {
+func init() {
+	output.Register("dnsstat", setup, process, finish)
+}
+
+func setup(isverbose bool) {
 	verbose = isverbose
 	dnsstatcollector = make(map[string]uint)
 }
 
-func Process(res result.Result) {
+func process(res result.Result) {
 	total++
 
 	dns := res.(*result.DnsResult)
@@ -63,7 +68,7 @@ func Process(res result.Result) {
 	}
 }
 
-func Finish() {
+func finish() {
 	var anssum uint = 0
 	for k, v := range dnsstatcollector {
 		fmt.Printf("%d\t\"%s\"\n", v, k)

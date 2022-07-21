@@ -6,6 +6,13 @@
 
 package main
 
+import (
+	_ "goatcli/output/dnsstat"
+	_ "goatcli/output/most"
+	_ "goatcli/output/native"
+	_ "goatcli/output/some"
+)
+
 func main() {
 	configure()
 	commandSelector()

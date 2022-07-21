@@ -5,13 +5,14 @@
 */
 
 /*
-  Defines the "some" and "most" output formatters.
+  Defines the "some" output formatter.
 */
 
 package some
 
 import (
 	"fmt"
+	"goatcli/output"
 
 	"github.com/robert-kisteleki/goatapi/result"
 )
@@ -19,11 +20,15 @@ import (
 var verbose bool
 var total uint
 
-func Setup(isverbose bool) {
+func init() {
+	output.Register("some", setup, process, finish)
+}
+
+func setup(isverbose bool) {
 	verbose = isverbose
 }
 
-func Process(res result.Result) {
+func process(res result.Result) {
 	total++
 
 	switch r := res.(type) {
@@ -46,7 +51,7 @@ func Process(res result.Result) {
 	}
 }
 
-func Finish() {
+func finish() {
 	if verbose {
 		fmt.Printf("# %d results\n", total)
 	}
