@@ -43,20 +43,6 @@ func commandResult(args []string) {
 		os.Exit(1)
 	}
 
-	// this is left here intentionally as an alternative
-	/*
-		// most of the work is done by goatAPI
-		results, err := filter.GetResults(flagVerbose)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-			os.Exit(1)
-		}
-
-		if flagVerbose {
-			fmt.Printf("# %d results\n", len(results))
-		}
-	*/
-
 	// if no ID and no file was specified then read from stdin
 	if flags.filterID == 0 && flags.filterInfile == "" {
 		filter.FilterFile("-")
@@ -65,7 +51,7 @@ func commandResult(args []string) {
 	// most of the work is done by goatAPI
 	// we receive results as they come in, via a channel
 	results := make(chan result.AsyncResult)
-	go filter.GetResultsAsync(flagVerbose, results)
+	go filter.GetResults(flagVerbose, results)
 
 	output.Setup(formatter, flagVerbose)
 	for result := range results {

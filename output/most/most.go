@@ -30,10 +30,10 @@ func setup(isverbose bool) {
 	verbose = isverbose
 }
 
-func process(res result.Result) {
+func process(res *result.Result) {
 	total++
 
-	switch r := res.(type) {
+	switch r := (*res).(type) {
 	case *result.PingResult:
 		fmt.Println(mostOutputPing(r))
 	case *result.DnsResult:
@@ -61,6 +61,7 @@ func finish() {
 
 func mostOutputPing(res *result.PingResult) string {
 	return some.SomeOutputPing(res) +
+		fmt.Sprintf("\t%s", output.ProbeCountry(res.ProbeID)) +
 		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f/%f",
 			res.Sent, res.Received, res.Duplicates,
 			res.Minimum, res.Average, res.Median, res.Maximum,

@@ -30,10 +30,10 @@ func setup(isverbose bool) {
 	verbose = isverbose
 }
 
-func process(res result.Result) {
+func process(res *result.Result) {
 	total++
 
-	switch r := res.(type) {
+	switch r := (*res).(type) {
 	case *result.PingResult:
 		nativeOutputPing(r)
 	case *result.TracerouteResult:
@@ -44,7 +44,7 @@ func process(res result.Result) {
 	*/
 	default:
 		fmt.Printf("No native formatter defined for result type '%s'\n",
-			res.TypeName(),
+			(*res).TypeName(),
 		)
 	}
 }

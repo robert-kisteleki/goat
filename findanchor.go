@@ -47,32 +47,36 @@ func commandFindAnchor(args []string) {
 	}
 
 	// most of the work is done by goatAPI
-	anchors, err := filter.GetAnchors(flagVerbose)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-
-	if flagVerbose {
-		fmt.Printf("# %d anchors found\n", len(anchors))
-	}
+	anchors := make(chan goatapi.AsyncAnchorResult)
+	go filter.GetAnchors(flagVerbose, anchors)
 
 	// produce output; exact format depends on the "format" option
 	ids := make([]string, 0)
-	for _, anchor := range anchors {
-		switch options["format"] {
-		case "id":
-			fmt.Println(anchor.ID)
-		case "idcsv":
-			ids = append(ids, fmt.Sprintf("%d", anchor.ID))
-		case "some":
-			fmt.Println(anchor.ShortString())
-		case "most":
-			fmt.Println(anchor.LongString())
+	var total uint = 0
+	for anchor := range anchors {
+		if anchor.Error != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %v\n", anchor.Error)
+			os.Exit(1)
+		} else {
+			switch options["format"] {
+			case "id":
+				fmt.Println(anchor.Anchor.ID)
+			case "idcsv":
+				ids = append(ids, fmt.Sprintf("%d", anchor.Anchor.ID))
+			case "some":
+				fmt.Println(anchor.Anchor.ShortString())
+			case "most":
+				fmt.Println(anchor.Anchor.LongString())
+			}
+			total++
 		}
 	}
 	if options["format"] == "idcsv" {
 		fmt.Println(strings.Join(ids, ","))
+	}
+
+	if flagVerbose {
+		fmt.Printf("# %d anchors found\n", total)
 	}
 }
 

@@ -82,32 +82,36 @@ func commandFindMsm(args []string) {
 	}
 
 	// most of the work is done by goatAPI
-	measurements, err := filter.GetMeasurements(flagVerbose)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-
-	if flagVerbose {
-		fmt.Printf("# %d measurements found\n", len(measurements))
-	}
+	measurements := make(chan goatapi.AsyncMeasurementResult)
+	go filter.GetMeasurements(flagVerbose, measurements)
 
 	// produce output; exact format depends on the "format" option
 	ids := make([]string, 0)
-	for _, measurement := range measurements {
-		switch options["format"] {
-		case "id":
-			fmt.Println(measurement.ID)
-		case "idcsv":
-			ids = append(ids, fmt.Sprintf("%d", measurement.ID))
-		case "some":
-			fmt.Println(measurement.ShortString())
-		case "most":
-			fmt.Println(measurement.LongString())
+	var total uint = 0
+	for measurement := range measurements {
+		if measurement.Error != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %v\n", measurement.Error)
+			os.Exit(1)
+		} else {
+			switch options["format"] {
+			case "id":
+				fmt.Println(measurement.Measurement.ID)
+			case "idcsv":
+				ids = append(ids, fmt.Sprintf("%d", measurement.Measurement.ID))
+			case "some":
+				fmt.Println(measurement.Measurement.ShortString())
+			case "most":
+				fmt.Println(measurement.Measurement.LongString())
+			}
+			total++
 		}
 	}
 	if options["format"] == "idcsv" {
 		fmt.Println(strings.Join(ids, ","))
+	}
+
+	if flagVerbose {
+		fmt.Printf("# %d measurements found\n", total)
 	}
 }
 

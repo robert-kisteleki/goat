@@ -77,32 +77,36 @@ func commandFindProbe(args []string) {
 	}
 
 	// most of the work is done by goatAPI
-	probes, err := filter.GetProbes(flagVerbose)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-
-	if flagVerbose {
-		fmt.Printf("# %d probes found\n", len(probes))
-	}
+	probes := make(chan goatapi.AsyncProbeResult)
+	go filter.GetProbes(flagVerbose, probes)
 
 	// produce output; exact format depends on the "format" option
 	ids := make([]string, 0)
-	for _, probe := range probes {
-		switch options["format"] {
-		case "id":
-			fmt.Println(probe.ID)
-		case "idcsv":
-			ids = append(ids, fmt.Sprintf("%d", probe.ID))
-		case "some":
-			fmt.Println(probe.ShortString())
-		case "most":
-			fmt.Println(probe.LongString())
+	var total uint = 0
+	for probe := range probes {
+		if probe.Error != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %v\n", probe.Error)
+			os.Exit(1)
+		} else {
+			switch options["format"] {
+			case "id":
+				fmt.Println(probe.Probe.ID)
+			case "idcsv":
+				ids = append(ids, fmt.Sprintf("%d", probe.Probe.ID))
+			case "some":
+				fmt.Println(probe.Probe.ShortString())
+			case "most":
+				fmt.Println(probe.Probe.LongString())
+			}
+			total++
 		}
 	}
 	if options["format"] == "idcsv" {
 		fmt.Println(strings.Join(ids, ","))
+	}
+
+	if flagVerbose {
+		fmt.Printf("# %d probes found\n", total)
 	}
 }
 

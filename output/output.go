@@ -25,7 +25,7 @@ import (
 type outform struct {
 	format  string
 	setup   func(bool)
-	process func(result.Result)
+	process func(*result.Result)
 	finish  func()
 }
 
@@ -40,7 +40,7 @@ func init() {
 func Register(
 	format string,
 	setup func(bool),
-	process func(result.Result),
+	process func(*result.Result),
 	finish func(),
 ) {
 	formats[format] = outform{format, setup, process, finish}
@@ -63,7 +63,7 @@ func Setup(format string, isverbose bool) {
 }
 
 // Process one incoming result
-func Process(format string, result result.Result) {
+func Process(format string, result *result.Result) {
 	if formatter, ok := formats[format]; ok {
 		formatter.process(result)
 	} else {

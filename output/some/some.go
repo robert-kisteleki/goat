@@ -28,10 +28,10 @@ func setup(isverbose bool) {
 	verbose = isverbose
 }
 
-func process(res result.Result) {
+func process(res *result.Result) {
 	total++
 
-	switch r := res.(type) {
+	switch r := (*res).(type) {
 	case *result.PingResult:
 		fmt.Println(SomeOutputPing(r))
 	case *result.DnsResult:

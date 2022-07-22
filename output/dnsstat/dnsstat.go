@@ -32,10 +32,10 @@ func setup(isverbose bool) {
 	dnsstatcollector = make(map[string]uint)
 }
 
-func process(res result.Result) {
+func process(res *result.Result) {
 	total++
 
-	dns := res.(*result.DnsResult)
+	dns := (*res).(*result.DnsResult)
 	var key string
 
 	if len(dns.Error) > 0 {
