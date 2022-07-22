@@ -30,22 +30,25 @@ func setup(isverbose bool) {
 	verbose = isverbose
 }
 
-func process(res *result.Result) {
+func process(res any) {
 	total++
 
-	switch r := (*res).(type) {
-	case *result.PingResult:
-		nativeOutputPing(r)
-	case *result.TracerouteResult:
-		nativeOutputTraceroute(r)
-	/*
-		case *result.DnsResult:
-			nativeOutputDns(r)
-	*/
+	switch t := res.(type) {
+	case *result.Result:
+		switch rt := (*t).(type) {
+		case *result.PingResult:
+			nativeOutputPing(rt)
+		case *result.TracerouteResult:
+			nativeOutputTraceroute(rt)
+			/*
+				case *result.DnsResult:
+					nativeOutputDns(rt)
+			*/
+		default:
+			fmt.Printf("No output formatter defined for result type '%T'\n", rt)
+		}
 	default:
-		fmt.Printf("No native formatter defined for result type '%s'\n",
-			(*res).TypeName(),
-		)
+		fmt.Printf("No output formatter defined for object type '%T'\n", t)
 	}
 }
 

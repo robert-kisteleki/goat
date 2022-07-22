@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"goatcli/output"
 	"net/netip"
 	"os"
 	"regexp"
@@ -57,7 +58,7 @@ type findMsmFlags struct {
 	filterProtocol      string
 	filterMy            bool
 
-	format string
+	output string
 	sort   string
 	limit  uint
 	count  bool
@@ -68,6 +69,12 @@ type findMsmFlags struct {
 func commandFindMsm(args []string) {
 	flags := parseFindMsmArgs(args)
 	filter, options := parseFindMsmFlags(flags)
+	formatter := options["output"].(string)
+
+	if !output.Verify(formatter) {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+		os.Exit(1)
+	}
 
 	// counting only
 	if _, ok := options["count"]; ok {
@@ -77,7 +84,6 @@ func commandFindMsm(args []string) {
 			os.Exit(1)
 		}
 		fmt.Println(count)
-
 		return
 	}
 
@@ -86,33 +92,16 @@ func commandFindMsm(args []string) {
 	go filter.GetMeasurements(flagVerbose, measurements)
 
 	// produce output; exact format depends on the "format" option
-	ids := make([]string, 0)
-	var total uint = 0
+	output.Setup(formatter, flagVerbose)
 	for measurement := range measurements {
 		if measurement.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", measurement.Error)
 			os.Exit(1)
 		} else {
-			switch options["format"] {
-			case "id":
-				fmt.Println(measurement.Measurement.ID)
-			case "idcsv":
-				ids = append(ids, fmt.Sprintf("%d", measurement.Measurement.ID))
-			case "some":
-				fmt.Println(measurement.Measurement.ShortString())
-			case "most":
-				fmt.Println(measurement.Measurement.LongString())
-			}
-			total++
+			output.Process(formatter, measurement)
 		}
 	}
-	if options["format"] == "idcsv" {
-		fmt.Println(strings.Join(ids, ","))
-	}
-
-	if flagVerbose {
-		fmt.Printf("# %d measurements found\n", total)
-	}
+	output.Finish(formatter)
 }
 
 // Process flags (filters & options), pass most of them on to goatAPI
@@ -126,13 +115,8 @@ func parseFindMsmFlags(flags *findMsmFlags) (
 
 	// options
 
-	formats := []string{"id", "idcsv", "some", "most"}
-	if slices.Contains(formats, flags.format) {
-		options["format"] = flags.format
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: invalid output format\n")
-		os.Exit(1)
-	}
+	options["output"] = flags.output
+
 	if flags.sort != "" {
 		if goatapi.ValidMeasurementListSortOrder(flags.sort) {
 			filter.Sort(flags.sort)
@@ -436,7 +420,7 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	// options
 	flagsFindMsm.BoolVar(&flags.count, "count", false, "Count only, don't show the actual results")
 	flagsFindMsm.StringVar(&flags.sort, "sort", "-id", "Result ordering: "+strings.Join(goatapi.MeasurementListSortOrders, ","))
-	flagsFindMsm.StringVar(&flags.format, "format", "some", "Output contents: one of 'id', 'idcsv', 'some' (default), 'most'")
+	flagsFindMsm.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
 
 	// limit
 	flagsFindMsm.UintVar(&flags.limit, "limit", 100, "Maximum amount of measurements to retrieve")

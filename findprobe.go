@@ -8,13 +8,13 @@ package main
 
 import (
 	"fmt"
+	"goatcli/output"
 	"net/netip"
 	"os"
 	"regexp"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi"
-	"golang.org/x/exp/slices"
 )
 
 // struct to receive/store command line args for probe filtering
@@ -52,7 +52,7 @@ type findProbeFlags struct {
 	filterNotPublic bool
 	filterTags      string
 
-	format string
+	output string
 	sort   string
 	limit  uint
 	count  bool
@@ -63,6 +63,12 @@ type findProbeFlags struct {
 func commandFindProbe(args []string) {
 	flags := parseFindProbeArgs(args)
 	filter, options := parseFindProbeFlags(flags)
+	formatter := options["output"].(string)
+
+	if !output.Verify(formatter) {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+		os.Exit(1)
+	}
 
 	// counting only
 	if _, ok := options["count"]; ok {
@@ -72,7 +78,6 @@ func commandFindProbe(args []string) {
 			os.Exit(1)
 		}
 		fmt.Println(count)
-
 		return
 	}
 
@@ -81,33 +86,16 @@ func commandFindProbe(args []string) {
 	go filter.GetProbes(flagVerbose, probes)
 
 	// produce output; exact format depends on the "format" option
-	ids := make([]string, 0)
-	var total uint = 0
+	output.Setup(formatter, flagVerbose)
 	for probe := range probes {
 		if probe.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", probe.Error)
 			os.Exit(1)
 		} else {
-			switch options["format"] {
-			case "id":
-				fmt.Println(probe.Probe.ID)
-			case "idcsv":
-				ids = append(ids, fmt.Sprintf("%d", probe.Probe.ID))
-			case "some":
-				fmt.Println(probe.Probe.ShortString())
-			case "most":
-				fmt.Println(probe.Probe.LongString())
-			}
-			total++
+			output.Process(formatter, probe)
 		}
 	}
-	if options["format"] == "idcsv" {
-		fmt.Println(strings.Join(ids, ","))
-	}
-
-	if flagVerbose {
-		fmt.Printf("# %d probes found\n", total)
-	}
+	output.Finish(formatter)
 }
 
 // Process flags (filters & options), pass most of them on to goatAPI
@@ -121,13 +109,8 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 
 	// options
 
-	formats := []string{"id", "idcsv", "some", "most"}
-	if slices.Contains(formats, flags.format) {
-		options["format"] = flags.format
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: invalid output format\n")
-		os.Exit(1)
-	}
+	options["output"] = flags.output
+
 	if flags.sort != "" {
 		if goatapi.ValidProbeListSortOrder(flags.sort) {
 			filter.Sort(flags.sort)
@@ -348,7 +331,7 @@ func parseFindProbeArgs(args []string) *findProbeFlags {
 	// options
 	flagsFindProbe.BoolVar(&flags.count, "count", false, "Count only, don't show the actual results")
 	flagsFindProbe.StringVar(&flags.sort, "sort", "-id", "Result ordering: "+strings.Join(goatapi.ProbeListSortOrders, ","))
-	flagsFindProbe.StringVar(&flags.format, "format", "some", "Output contents: one of 'id', 'idcsv', 'some', 'most'")
+	flagsFindProbe.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
 
 	// limit
 	flagsFindProbe.UintVar(&flags.limit, "limit", 100, "Maximum amount of probes to retrieve")

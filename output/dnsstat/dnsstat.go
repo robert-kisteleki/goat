@@ -32,10 +32,25 @@ func setup(isverbose bool) {
 	dnsstatcollector = make(map[string]uint)
 }
 
-func process(res *result.Result) {
+func process(res any) {
 	total++
 
-	dns := (*res).(*result.DnsResult)
+	switch t := res.(type) {
+	case *result.Result:
+		switch (*t).(type) {
+		case *result.DnsResult:
+			// ok
+		default:
+			fmt.Printf("This output formatter only works for DNS results\n")
+			return
+		}
+	default:
+		fmt.Printf("This output formatter only works for DNS results\n")
+		return
+	}
+
+	resconv := res.(*result.Result)
+	dns := (*resconv).(*result.DnsResult)
 	var key string
 
 	if len(dns.Error) > 0 {

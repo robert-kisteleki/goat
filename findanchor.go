@@ -8,11 +8,11 @@ package main
 
 import (
 	"fmt"
+	"goatcli/output"
 	"os"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi"
-	"golang.org/x/exp/slices"
 )
 
 // struct to receive/store command line args for anchor filtering
@@ -23,7 +23,7 @@ type findAnchorFlags struct {
 	filterCC     string
 	filterSearch string
 
-	format string
+	output string
 	limit  uint
 	count  bool
 }
@@ -33,6 +33,12 @@ type findAnchorFlags struct {
 func commandFindAnchor(args []string) {
 	flags := parseFindAnchorArgs(args)
 	filter, options := processFindAnchorFlags(flags)
+	formatter := options["output"].(string)
+
+	if !output.Verify(formatter) {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+		os.Exit(1)
+	}
 
 	// counting only
 	if _, ok := options["count"]; ok {
@@ -42,7 +48,6 @@ func commandFindAnchor(args []string) {
 			os.Exit(1)
 		}
 		fmt.Println(count)
-
 		return
 	}
 
@@ -51,33 +56,16 @@ func commandFindAnchor(args []string) {
 	go filter.GetAnchors(flagVerbose, anchors)
 
 	// produce output; exact format depends on the "format" option
-	ids := make([]string, 0)
-	var total uint = 0
+	output.Setup(formatter, flagVerbose)
 	for anchor := range anchors {
 		if anchor.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", anchor.Error)
 			os.Exit(1)
 		} else {
-			switch options["format"] {
-			case "id":
-				fmt.Println(anchor.Anchor.ID)
-			case "idcsv":
-				ids = append(ids, fmt.Sprintf("%d", anchor.Anchor.ID))
-			case "some":
-				fmt.Println(anchor.Anchor.ShortString())
-			case "most":
-				fmt.Println(anchor.Anchor.LongString())
-			}
-			total++
+			output.Process(formatter, anchor)
 		}
 	}
-	if options["format"] == "idcsv" {
-		fmt.Println(strings.Join(ids, ","))
-	}
-
-	if flagVerbose {
-		fmt.Printf("# %d anchors found\n", total)
-	}
+	output.Finish(formatter)
 }
 
 // Process flags (filters & options), pass most of them on to goatAPI
@@ -91,13 +79,8 @@ func processFindAnchorFlags(flags *findAnchorFlags) (
 
 	// options
 
-	formats := []string{"id", "idcsv", "some", "most"}
-	if slices.Contains(formats, flags.format) {
-		options["format"] = flags.format
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: invalid output format\n")
-		os.Exit(1)
-	}
+	options["output"] = flags.output
+
 	if flags.limit > 0 {
 		filter.Limit(flags.limit)
 	} else {
@@ -152,7 +135,7 @@ func parseFindAnchorArgs(args []string) *findAnchorFlags {
 
 	// options
 	flagsFindAnchor.BoolVar(&flags.count, "count", false, "Count only, don't show the actual results")
-	flagsFindAnchor.StringVar(&flags.format, "format", "some", "Output contents: one of 'id', 'idcsv', 'some' (default), 'most'")
+	flagsFindAnchor.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
 
 	// limit
 	flagsFindAnchor.UintVar(&flags.limit, "limit", 100, "Maximum amount of anchors to retrieve")

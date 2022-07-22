@@ -18,14 +18,12 @@ package output
 
 import (
 	"fmt"
-
-	"github.com/robert-kisteleki/goatapi/result"
 )
 
 type outform struct {
 	format  string
 	setup   func(bool)
-	process func(*result.Result)
+	process func(any)
 	finish  func()
 }
 
@@ -40,7 +38,7 @@ func init() {
 func Register(
 	format string,
 	setup func(bool),
-	process func(*result.Result),
+	process func(any),
 	finish func(),
 ) {
 	formats[format] = outform{format, setup, process, finish}
@@ -63,7 +61,7 @@ func Setup(format string, isverbose bool) {
 }
 
 // Process one incoming result
-func Process(format string, result *result.Result) {
+func Process(format string, result any) {
 	if formatter, ok := formats[format]; ok {
 		formatter.process(result)
 	} else {

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"goatcli/output"
 
+	"github.com/robert-kisteleki/goatapi"
 	"github.com/robert-kisteleki/goatapi/result"
 )
 
@@ -28,26 +29,39 @@ func setup(isverbose bool) {
 	verbose = isverbose
 }
 
-func process(res *result.Result) {
+func process(res any) {
 	total++
 
-	switch r := (*res).(type) {
-	case *result.PingResult:
-		fmt.Println(SomeOutputPing(r))
-	case *result.DnsResult:
-		fmt.Println(SomeOutputDns(r))
-	case *result.TracerouteResult:
-		fmt.Println(SomeOutputTraceroute(r))
-	case *result.CertResult:
-		fmt.Println(SomeOutputCert(r))
-	case *result.HttpResult:
-		fmt.Println(SomeOutputHttp(r))
-	case *result.NtpResult:
-		fmt.Println(SomeOutputNtp(r))
-	case *result.ConnectionResult:
-		fmt.Println(SomeOutputConnection(r))
-	case *result.UptimeResult:
-		fmt.Println(SomeOutputUptime(r))
+	switch t := res.(type) {
+	case *result.Result:
+		switch rt := (*t).(type) {
+		case *result.PingResult:
+			fmt.Println(SomeOutputPing(rt))
+		case *result.DnsResult:
+			fmt.Println(SomeOutputDns(rt))
+		case *result.TracerouteResult:
+			fmt.Println(SomeOutputTraceroute(rt))
+		case *result.CertResult:
+			fmt.Println(SomeOutputCert(rt))
+		case *result.HttpResult:
+			fmt.Println(SomeOutputHttp(rt))
+		case *result.NtpResult:
+			fmt.Println(SomeOutputNtp(rt))
+		case *result.ConnectionResult:
+			fmt.Println(SomeOutputConnection(rt))
+		case *result.UptimeResult:
+			fmt.Println(SomeOutputUptime(rt))
+		default:
+			fmt.Printf("No output formatter defined for result type '%T'\n", rt)
+		}
+	case goatapi.AsyncAnchorResult:
+		fmt.Println(t.Anchor.ShortString())
+	case goatapi.AsyncProbeResult:
+		fmt.Println(t.Probe.ShortString())
+	case goatapi.AsyncMeasurementResult:
+		fmt.Println(t.Measurement.ShortString())
+	default:
+		fmt.Printf("No output formatter defined for object type '%T'\n", t)
 	}
 }
 
