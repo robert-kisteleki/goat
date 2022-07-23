@@ -1,5 +1,11 @@
 # goatCLI changelog
 
+## v0.2.1
+
+* CHANGED: internal changes on how output formatters work
+* CHANGED: output filters are now used for probes, anchors and measurements too
+* CHANGED: adapt code to goatAPI v0.2.1 async results
+
 ## v0.2.0
 
 * NEW: support for downloading results of a measurement
