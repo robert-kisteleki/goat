@@ -2,11 +2,11 @@
 
 ## v0.2.2
 
-* NEW: output formatters can now accept optins (`--opt X`)
+* NEW: output formatters can now accept options (`--opt X`)
 * NEW: output annotator: output formatters can get probe ASN, CC and prefix
-  information. Probe metadata is cached accross runs, for a week.
+  information. Probe metadata is cached across runs, for a week.
 * CHANGED: output formatters now have a `start()` method to signal processing
-  of (a batch of) results, this maybe even multiple times - just like with
+  of new (batch of) results; this maybe even multiple times - just like with
   `finish()` from now on. `setup()` is only called once, before any results are
   processed.
 * NEW: `--opt ccstat` and `--opt asnstat` options for the `dnsstats` formatter

@@ -112,9 +112,10 @@ $ ./goatcli findmsm --id 34680813
 ## Processing results
 
 goatCLI can fetch results of exiting measurements (either from the API or from a local file). It's possible to choose what kind of output you want via output formatters:
-* "some" and "most" echo some basic properties of the results
-* "native" produces native-looking outputs (for now for ping and traceroute)
-* "dnsstat" provides basic statistics of DNS results
+* `some` and `most` echo some basic properties of the results
+* `native` produces native-looking outputs (for now for ping and traceroute)
+* `dnsstat` provides basic statistics of DNS results
+* `id` and `idcsv` only output the ID of the results (`idcsv` dor sthis in CSV format)
 
 The API call variant supports setting the start time, end time, probe id(s), and a few more filters.
 
@@ -132,13 +133,13 @@ $ cat some-results.jsonl | ./goatcli result
 
 Loading results from a file expects one result per line ("format=txt" a.k.a. JSONL a.k.a. NDJSON)
 
-The output formatters are extensible, feel free to write your own -- and conntribute that back to this repo! You only need to make a new package under `output` that implements three functions:
+The output formatters are extensible, feel free to write your own -- and contribute that back to this repo! You only need to make a new package under `output` that implements four functions:
 * `setup()` to initialise the output processor
 * `start()` to prepare for processing results; may be called once per batch of results
 * `process()` to deal with one incoming result
 * `finish()` to finish processing, make a summary, etc.; may be called once per batch of results
 
-New output processors need to be registered in `output.go`. See `some.go` or `native.go` for examples.
+New output processors need to be registered in `goatcli.go`. See `some.go` or `native.go` for examples.
 
 # Future Additions / TODO
 
