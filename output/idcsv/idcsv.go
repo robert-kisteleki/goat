@@ -5,10 +5,10 @@
 */
 
 /*
-  Defines the "id" output formatter.
+  Defines the "idcsv" output formatter.
 */
 
-package id
+package idcsv
 
 import (
 	"fmt"
