@@ -9,6 +9,7 @@
   of (a batch of) results, this maybe even multiple times - just like with
   `finish()` from now on. `setup()` is only called once, before any results are
   processed.
+* NEW: `--opt ccstat` and `--opt asnstat` options for the `dnsstats` formatter
 
 ## v0.2.1
 
