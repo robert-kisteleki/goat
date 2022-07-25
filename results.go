@@ -26,8 +26,9 @@ type resultFlags struct {
 	filterPublicProbes bool
 	filterLatest       bool
 
-	output string // output formater
-	limit  uint
+	output  string // output formater
+	outopts multioption
+	limit   uint
 }
 
 // Implementation of the "result" subcommand. Parses command line flags
@@ -53,7 +54,8 @@ func commandResult(args []string) {
 	results := make(chan result.AsyncResult)
 	go filter.GetResults(flagVerbose, results)
 
-	output.Setup(formatter, flagVerbose)
+	output.Setup(formatter, flagVerbose, flags.outopts)
+	output.Start(formatter)
 	for result := range results {
 		if result.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %s\n", result.Error)
@@ -150,6 +152,7 @@ func parseResultArgs(args []string) *resultFlags {
 
 	// options
 	flagsGetResult.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most' or other available plugins")
+	flagsGetResult.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	// limit
 	flagsGetResult.UintVar(&flags.limit, "limit", 1000, "Maximum amount of results to parse")

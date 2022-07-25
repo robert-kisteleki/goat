@@ -23,11 +23,14 @@ var total uint
 var ids = make([]string, 0)
 
 func init() {
-	output.Register("idcsv", setup, process, finish)
+	output.Register("idcsv", setup, start, process, finish)
 }
 
-func setup(isverbose bool) {
+func setup(isverbose bool, options []string) {
 	verbose = isverbose
+}
+
+func start() {
 }
 
 func process(res any) {

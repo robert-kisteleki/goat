@@ -23,9 +23,10 @@ type findAnchorFlags struct {
 	filterCC     string
 	filterSearch string
 
-	output string
-	limit  uint
-	count  bool
+	output  string
+	outopts multioption
+	limit   uint
+	count   bool
 }
 
 // Implementation of the "find anchor" subcommand. Parses command line flags
@@ -56,7 +57,8 @@ func commandFindAnchor(args []string) {
 	go filter.GetAnchors(flagVerbose, anchors)
 
 	// produce output; exact format depends on the "format" option
-	output.Setup(formatter, flagVerbose)
+	output.Setup(formatter, flagVerbose, flags.outopts)
+	output.Start(formatter)
 	for anchor := range anchors {
 		if anchor.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", anchor.Error)
@@ -136,6 +138,7 @@ func parseFindAnchorArgs(args []string) *findAnchorFlags {
 	// options
 	flagsFindAnchor.BoolVar(&flags.count, "count", false, "Count only, don't show the actual results")
 	flagsFindAnchor.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
+	flagsFindAnchor.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	// limit
 	flagsFindAnchor.UintVar(&flags.limit, "limit", 100, "Maximum amount of anchors to retrieve")

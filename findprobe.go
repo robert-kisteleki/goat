@@ -52,10 +52,11 @@ type findProbeFlags struct {
 	filterNotPublic bool
 	filterTags      string
 
-	output string
-	sort   string
-	limit  uint
-	count  bool
+	output  string
+	outopts multioption
+	sort    string
+	limit   uint
+	count   bool
 }
 
 // Implementation of the "find probe" subcommand. Parses command line flags
@@ -86,7 +87,8 @@ func commandFindProbe(args []string) {
 	go filter.GetProbes(flagVerbose, probes)
 
 	// produce output; exact format depends on the "format" option
-	output.Setup(formatter, flagVerbose)
+	output.Setup(formatter, flagVerbose, flags.outopts)
+	output.Start(formatter)
 	for probe := range probes {
 		if probe.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", probe.Error)
@@ -332,6 +334,7 @@ func parseFindProbeArgs(args []string) *findProbeFlags {
 	flagsFindProbe.BoolVar(&flags.count, "count", false, "Count only, don't show the actual results")
 	flagsFindProbe.StringVar(&flags.sort, "sort", "-id", "Result ordering: "+strings.Join(goatapi.ProbeListSortOrders, ","))
 	flagsFindProbe.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
+	flagsFindProbe.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	// limit
 	flagsFindProbe.UintVar(&flags.limit, "limit", 100, "Maximum amount of probes to retrieve")

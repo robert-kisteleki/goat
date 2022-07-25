@@ -130,12 +130,13 @@ Or perhaps:
 $ cat some-results.jsonl | ./goatcli result
 ```
 
-Loading results from a file expects one result per line ("format=txt" a.k.a. JSONL)
+Loading results from a file expects one result per line ("format=txt" a.k.a. JSONL a.k.a. NDJSON)
 
 The output formatters are extensible, feel free to write your own -- and conntribute that back to this repo! You only need to make a new package under `output` that implements three functions:
-* `setup()` to prepare for processing results
+* `setup()` to initialise the output processor
+* `start()` to prepare for processing results; may be called once per batch of results
 * `process()` to deal with one incoming result
-* `finish()` to finish processing, make a summary, etc.
+* `finish()` to finish processing, make a summary, etc.; may be called once per batch of results
 
 New output processors need to be registered in `output.go`. See `some.go` or `native.go` for examples.
 

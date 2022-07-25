@@ -22,7 +22,8 @@ import (
 
 type outform struct {
 	format  string
-	setup   func(bool)
+	setup   func(bool, []string)
+	start   func()
 	process func(any)
 	finish  func()
 }
@@ -37,11 +38,12 @@ func init() {
 // Register a new output formatter with a name and th needed functions
 func Register(
 	format string,
-	setup func(bool),
+	setup func(bool, []string),
+	start func(),
 	process func(any),
 	finish func(),
 ) {
-	formats[format] = outform{format, setup, process, finish}
+	formats[format] = outform{format, setup, start, process, finish}
 }
 
 // Verify check is a particular formatter has been defined
@@ -50,10 +52,21 @@ func Verify(format string) bool {
 	return ok
 }
 
-// Setup is called before any results are processed
-func Setup(format string, isverbose bool) {
+// Setup is called once, before any results are processed
+func Setup(format string, isverbose bool, options []string) {
 	if formatter, ok := formats[format]; ok {
-		formatter.setup(isverbose)
+		formatter.setup(isverbose, options)
+	} else {
+		// this should not happen - as long as VerifyFormatter was properly used
+		panic(fmt.Sprintf("Unknown formatter %s was called\n", format))
+	}
+}
+
+// Start is called before a batch of results is processed.
+// It may be called more than once, i.e. once per batch.
+func Start(format string) {
+	if formatter, ok := formats[format]; ok {
+		formatter.start()
 	} else {
 		// this should not happen - as long as VerifyFormatter was properly used
 		panic(fmt.Sprintf("Unknown formatter %s was called\n", format))
@@ -70,7 +83,8 @@ func Process(format string, result any) {
 	}
 }
 
-// Finish is called after all results are processed
+// Finish is called after a batch of results is processed.
+// It may be called more than once, i.e. once per batch.
 func Finish(format string) {
 	if formatter, ok := formats[format]; ok {
 		formatter.finish()

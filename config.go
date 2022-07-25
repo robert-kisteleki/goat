@@ -9,6 +9,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"goatcli/output/annotate"
 	"os"
 
 	"github.com/google/uuid"
@@ -35,11 +36,12 @@ var (
 	apiKeys map[string]uuid.UUID // collected from config file
 )
 
-const version = "v0.2.1"
+const version = "v0.2.2"
 const CLIName = "goatCLI " + version
 
 var defaultConfigDir = os.Getenv("HOME") + "/.config"
 var defaultConfigFile = defaultConfigDir + "/goat.ini"
+var CacheDir string = os.Getenv("HOME") + "/.cache/goat/"
 
 var Subcommands map[string]*flag.FlagSet
 
@@ -126,6 +128,7 @@ func configure() {
 	}
 
 	goatapi.ModifyUserAgent(CLIName)
+	annotate.SetCacheDir(CacheDir, flagVerbose)
 }
 
 // readConfig deals with configuration file loading
@@ -144,13 +147,21 @@ func readConfig(confFile string) bool {
 
 	// record stuff that was in the config file
 	loadApiKey(cfg, "list_measurements")
-	// TODO: add more API key variaations here
+	// TODO: add more API key variations here
 
 	// allow config to override where the API is
 	apibase := cfg.Section("").Key("apibase").MustString("")
 	if apibase != "" {
 		goatapi.SetAPIBase(apibase)
 	}
+
+	// allow config to override the cache directory
+	cachedir := cfg.Section("").Key("cachedir").MustString("")
+	if cachedir != "" {
+		CacheDir = cachedir
+	}
+	// we deliberately ignore errors on creating this dir as it may exist
+	_ = os.MkdirAll(CacheDir, os.FileMode(0755))
 
 	return true
 }
@@ -159,8 +170,8 @@ func readConfig(confFile string) bool {
 func createConfig(confFile string) {
 	// TODO: perhaps try to make the config directory first?
 
-	// we deliberately ignre errors on creating this dir as it may exist
-	_ = os.MkdirAll(defaultConfigDir, os.FileMode(0755))
+	// we deliberately ignore errors on creating this dir as it may exist
+	_ = os.MkdirAll(defaultConfigDir, os.FileMode(0700))
 
 	f, err := os.Create(confFile)
 	if err != nil && flagVerbose {
@@ -178,6 +189,9 @@ func createConfig(confFile string) {
 # apibase lets you override the default API location
 # useful only for compatible APIs, i.e. proxies, API development, ...
 apibase = ""
+
+# cachedir defines where to put cache files (ie. probe data)
+cachedir = "~/.cache/goat/"
 
 # apikeys is where the various (private) API keys are defined
 [apikeys]

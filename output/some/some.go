@@ -22,11 +22,14 @@ var verbose bool
 var total uint
 
 func init() {
-	output.Register("some", setup, process, finish)
+	output.Register("some", setup, start, process, finish)
 }
 
-func setup(isverbose bool) {
+func setup(isverbose bool, options []string) {
 	verbose = isverbose
+}
+
+func start() {
 }
 
 func process(res any) {

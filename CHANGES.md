@@ -1,5 +1,15 @@
 # goatCLI changelog
 
+## v0.2.2
+
+* NEW: output formatters can now accept optins (`--opt X`)
+* NEW: output annotator: output formatters can get probe ASN, CC and prefix
+  information. Probe metadata is cached accross runs, for a week.
+* CHANGED: output formatters now have a `start()` method to signal processing
+  of (a batch of) results, this maybe even multiple times - just like with
+  `finish()` from now on. `setup()` is only called once, before any results are
+  processed.
+
 ## v0.2.1
 
 * CHANGED: internal changes on how output formatters work

@@ -80,3 +80,16 @@ func parseTimeAlternatives(data string) (time.Time, error) {
 	// we failed. Return an error; the time value can be ignored
 	return time.Now().UTC(), fmt.Errorf("could not parse time: %s", data)
 }
+
+type multioption []string
+
+func (o *multioption) String() string {
+	return fmt.Sprint(*o)
+}
+
+func (o *multioption) Set(value string) error {
+	for _, part := range strings.Split(value, ",") {
+		*o = append(*o, part)
+	}
+	return nil
+}

@@ -13,6 +13,8 @@ package dnsstat
 import (
 	"fmt"
 	"goatcli/output"
+	"goatcli/output/annotate"
+	"sort"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
@@ -21,15 +23,38 @@ import (
 
 var verbose bool
 var total uint
-var dnsstatcollector map[string]uint
+var dnsstatcollector map[string]*collectorItem
+var makeCcStats bool
+var makeAsnStats bool
 
-func init() {
-	output.Register("dnsstat", setup, process, finish)
+type collectorItem struct {
+	Total uint
+	CCs   map[string]uint
+	Asns  map[string]uint
 }
 
-func setup(isverbose bool) {
+func init() {
+	output.Register("dnsstat", setup, start, process, finish)
+}
+
+func setup(isverbose bool, options []string) {
 	verbose = isverbose
-	dnsstatcollector = make(map[string]uint)
+	if slices.Contains(options, "ccstat") {
+		if verbose {
+			fmt.Println("# Enabled CC statistics")
+		}
+		makeCcStats = true
+	}
+	if slices.Contains(options, "asnstat") {
+		if verbose {
+			fmt.Println("# Enabled ASN statistics")
+		}
+		makeAsnStats = true
+	}
+}
+
+func start() {
+	dnsstatcollector = make(map[string]*collectorItem)
 }
 
 func process(res any) {
@@ -55,7 +80,7 @@ func process(res any) {
 
 	if len(dns.Error) > 0 {
 		key = "ERROR"
-		registerResult(key)
+		registerResult(key, dns.AddressFamily, dns.ProbeID)
 	} else {
 		for _, resp := range dns.Responses {
 			switch {
@@ -78,26 +103,83 @@ func process(res any) {
 			}
 
 			// count how many of these we had
-			registerResult(key)
+			registerResult(key, dns.AddressFamily, dns.ProbeID)
 		}
 	}
 }
 
 func finish() {
-	var anssum uint = 0
-	for k, v := range dnsstatcollector {
-		fmt.Printf("%d\t\"%s\"\n", v, k)
-		anssum += v
+	type valPlusCount struct {
+		val *collectorItem
+		key string
 	}
+
+	vpc := make([]valPlusCount, 0)
+	for key, val := range dnsstatcollector {
+		vpc = append(vpc, valPlusCount{val, key})
+	}
+	sort.Slice(vpc, func(i, j int) bool { return vpc[i].val.Total > vpc[j].val.Total })
+
+	var anssum uint = 0
+	for _, v := range vpc {
+		fmt.Printf("%d\t\"%s\"", v.val.Total, v.key)
+		if makeCcStats {
+			fmt.Print("\t")
+			printTopN(v.val.CCs, 5, "")
+		}
+		if makeAsnStats {
+			fmt.Print("\t")
+			printTopN(v.val.Asns, 5, "AS")
+		}
+		fmt.Println()
+		anssum += v.val.Total
+	}
+
 	if verbose {
 		fmt.Printf("# %d results, %d answers\n", total, anssum)
 	}
 }
 
-func registerResult(key string) {
+func registerResult(key string, af uint, pid uint) {
 	if val, ok := dnsstatcollector[key]; ok {
-		dnsstatcollector[key] = val + 1
+		val.Total = val.Total + 1
+		val.CCs[annotate.GetProbeCountry(pid)]++
+		if af == 4 {
+			val.Asns[annotate.GetProbeAsn4(pid)]++
+		} else {
+			val.Asns[annotate.GetProbeAsn6(pid)]++
+		}
 	} else {
-		dnsstatcollector[key] = 1
+		dnsstatcollector[key] = &collectorItem{
+			1,
+			make(map[string]uint),
+			make(map[string]uint),
+		}
+		dnsstatcollector[key].CCs[annotate.GetProbeCountry(pid)] = 1
+		if af == 4 {
+			dnsstatcollector[key].Asns[annotate.GetProbeAsn4(pid)] = 1
+		} else {
+			dnsstatcollector[key].Asns[annotate.GetProbeAsn6(pid)] = 1
+		}
+	}
+}
+
+func printTopN(data map[string]uint, max uint, as string) {
+	type valPlusCount struct {
+		val   string
+		count uint
+	}
+
+	vpc := make([]valPlusCount, 0)
+	for key, val := range data {
+		if key == "N/A" {
+			vpc = append(vpc, valPlusCount{"(N/A)", val})
+		} else {
+			vpc = append(vpc, valPlusCount{key, val})
+		}
+	}
+	sort.Slice(vpc, func(i, j int) bool { return vpc[i].count > vpc[j].count })
+	for i := 0; i < 10 && i < len(vpc); i++ {
+		fmt.Printf(" %s%s:%d", as, vpc[i].val, vpc[i].count)
 	}
 }

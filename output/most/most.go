@@ -13,6 +13,7 @@ package most
 import (
 	"fmt"
 	"goatcli/output"
+	"goatcli/output/annotate"
 	"goatcli/output/some"
 	"strings"
 
@@ -24,11 +25,14 @@ var verbose bool
 var total uint
 
 func init() {
-	output.Register("most", setup, process, finish)
+	output.Register("most", setup, start, process, finish)
 }
 
-func setup(isverbose bool) {
+func setup(isverbose bool, options []string) {
 	verbose = isverbose
+}
+
+func start() {
 }
 
 func process(res any) {
@@ -75,7 +79,7 @@ func finish() {
 
 func mostOutputPing(res *result.PingResult) string {
 	return some.SomeOutputPing(res) +
-		fmt.Sprintf("\t%s", output.ProbeCountry(res.ProbeID)) +
+		fmt.Sprintf("\t%s", annotate.GetProbeCountry(res.ProbeID)) +
 		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f/%f",
 			res.Sent, res.Received, res.Duplicates,
 			res.Minimum, res.Average, res.Median, res.Maximum,

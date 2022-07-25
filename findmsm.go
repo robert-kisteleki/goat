@@ -58,10 +58,11 @@ type findMsmFlags struct {
 	filterProtocol      string
 	filterMy            bool
 
-	output string
-	sort   string
-	limit  uint
-	count  bool
+	output  string
+	outopts multioption
+	sort    string
+	limit   uint
+	count   bool
 }
 
 // Implementation of the "find measurement" subcommand. Parses command line flags
@@ -92,7 +93,8 @@ func commandFindMsm(args []string) {
 	go filter.GetMeasurements(flagVerbose, measurements)
 
 	// produce output; exact format depends on the "format" option
-	output.Setup(formatter, flagVerbose)
+	output.Setup(formatter, flagVerbose, []string(flags.outopts))
+	output.Start(formatter)
 	for measurement := range measurements {
 		if measurement.Error != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", measurement.Error)
@@ -421,6 +423,7 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	flagsFindMsm.BoolVar(&flags.count, "count", false, "Count only, don't show the actual results")
 	flagsFindMsm.StringVar(&flags.sort, "sort", "-id", "Result ordering: "+strings.Join(goatapi.MeasurementListSortOrders, ","))
 	flagsFindMsm.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
+	flagsFindMsm.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	// limit
 	flagsFindMsm.UintVar(&flags.limit, "limit", 100, "Maximum amount of measurements to retrieve")
