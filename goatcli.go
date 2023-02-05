@@ -12,6 +12,7 @@ import (
 	_ "goatcli/output/idcsv"
 	_ "goatcli/output/most"
 	_ "goatcli/output/native"
+	_ "goatcli/output/none"
 	_ "goatcli/output/some"
 )
 
