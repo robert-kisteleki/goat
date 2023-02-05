@@ -1,5 +1,13 @@
 # goatCLI changelog
 
+## v0.3.0
+
+* NEW: add option to stream results from the result stream instead of the data API
+* NEW: add option to save all results obtained (from data API, stream API or even
+  from a file) to a file
+* NEW: added a dummy output formatter ("none")
+* CHANGED: change default limit on downloading results to 0 (no limit)
+
 ## v0.2.2
 
 * NEW: output formatters can now accept options (`--opt X`)

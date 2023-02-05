@@ -7,6 +7,7 @@ It supports:
 * finding anchors
 * finding measurements
 * downloading and displaying results of measurements and turning them into Go objects
+* tuning in to result streaming and turning them into Go objects
 * loading a local file containing measurement results and turning them into Go objects
 * various kinds of output formatters for displaying and aggregating measurement results
 * (more features to come)
@@ -111,27 +112,31 @@ $ ./goatcli findmsm --id 34680813
 
 ## Processing results
 
-goatCLI can fetch results of exiting measurements (either from the API or from a local file). It's possible to choose what kind of output you want via output formatters:
+goatCLI can fetch results of exiting measurements (either from the data API, result streaming or from a local file). It's possible to choose what kind of output you want via output formatters:
 * `some` and `most` echo some basic properties of the results
 * `native` produces native-looking outputs (for now for ping and traceroute)
 * `dnsstat` provides basic statistics of DNS results
-* `id` and `idcsv` only output the ID of the results (`idcsv` dor sthis in CSV format)
+* `id` and `idcsv` only output the ID of the results (`idcsv` does this in CSV format)
 
 The API call variant supports setting the start time, end time, probe id(s), and a few more filters.
 
-Basic usage:
+Getting data from the data API:
 
 ```sh
 $ ./goatcli result --id 1001 --probe 10001 --start today --output most
 ```
 
-Or perhaps:
+Tuning in to result stream, displaying incoming results in real-time but also saving them to a local file:
+
+```sh
+$ ./goatcli result --id 1001 --stream --save output.jsonl
+```
+
+Loading data from a local file is simple as well (from a file with one result per line ("format=txt" a.k.a. JSONL a.k.a. NDJSON)):
 
 ```sh
 $ cat some-results.jsonl | ./goatcli result
 ```
-
-Loading results from a file expects one result per line ("format=txt" a.k.a. JSONL a.k.a. NDJSON)
 
 The output formatters are extensible, feel free to write your own -- and contribute that back to this repo! You only need to make a new package under `output` that implements four functions:
 * `setup()` to initialise the output processor
@@ -145,12 +150,11 @@ New output processors need to be registered in `goatcli.go`. See `some.go` or `n
 
 * schedule a new measurement, stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
-* listen to real-time result stream of an already scheduled measurement
 * check credit balance, transfer credits, ...
 
 # Copyright, Contributing
 
-(C) 2022, [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
+(C) 2022, 2023 [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
 
 Contribution is possible and encouraged via the [Github repo]("https://github.com/robert-kisteleki/goatcli/")
 
