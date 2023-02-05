@@ -198,7 +198,7 @@ apibase = ""
 streambase = ""
 
 # cachedir defines where to put cache files (ie. probe data)
-cachedir = "~/.cache/goat/"
+cachedir = ""
 
 # apikeys is where the various (private) API keys are defined
 [apikeys]
