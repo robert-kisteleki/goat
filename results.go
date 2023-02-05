@@ -26,9 +26,14 @@ type resultFlags struct {
 	filterPublicProbes bool
 	filterLatest       bool
 
-	output  string // output formater
-	outopts multioption
-	limit   uint
+	stream bool
+
+	saveFileName string   // save raw result to this file (name)
+	saveFile     *os.File // save raw result to this file (handle after opening)
+	saveAll      bool
+	output       string // output formater
+	outopts      multioption
+	limit        uint
 }
 
 // Implementation of the "result" subcommand. Parses command line flags
@@ -47,6 +52,10 @@ func commandResult(args []string) {
 	// if no ID and no file was specified then read from stdin
 	if flags.filterID == 0 && flags.filterInfile == "" {
 		filter.FilterFile("-")
+	}
+
+	if flags.saveFile != nil {
+		defer flags.saveFile.Close()
 	}
 
 	// most of the work is done by goatAPI
@@ -79,12 +88,7 @@ func processResultFlags(flags *resultFlags) (
 
 	options["output"] = flags.output
 
-	if flags.limit == 0 {
-		fmt.Fprintf(os.Stderr, "ERROR: limit should be positive\n")
-		os.Exit(1)
-	} else {
-		filter.Limit(flags.limit)
-	}
+	filter.Limit(flags.limit)
 
 	// filters
 
@@ -133,6 +137,19 @@ func processResultFlags(flags *resultFlags) (
 		filter.FilterLatest()
 	}
 
+	filter.Stream(flags.stream)
+
+	if flags.saveFileName != "" {
+		f, err := os.Create(flags.saveFileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: cold not write to logfile (%v)\n", err)
+			os.Exit(1)
+		}
+		filter.Save(f)
+	}
+
+	filter.SaveAll(flags.saveAll)
+
 	return
 }
 
@@ -151,11 +168,14 @@ func parseResultArgs(args []string) *resultFlags {
 	flagsGetResult.BoolVar(&flags.filterLatest, "latest", false, "Filter for latest results only")
 
 	// options
+	flagsGetResult.StringVar(&flags.saveFileName, "save", "", "Save raw results to this file")
+	flagsGetResult.BoolVar(&flags.saveAll, "saveall", false, "Save all retrieved results, not only the ones that matched filters")
+	flagsGetResult.BoolVar(&flags.stream, "stream", false, "Use the result stream")
 	flagsGetResult.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most' or other available plugins")
 	flagsGetResult.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	// limit
-	flagsGetResult.UintVar(&flags.limit, "limit", 1000, "Maximum amount of results to parse")
+	flagsGetResult.UintVar(&flags.limit, "limit", 0, "Maximum amount of results to fetch")
 
 	flagsGetResult.Parse(args)
 

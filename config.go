@@ -155,6 +155,12 @@ func readConfig(confFile string) bool {
 		goatapi.SetAPIBase(apibase)
 	}
 
+	// allow config to override where the stream is
+	streambase := cfg.Section("").Key("streambase").MustString("")
+	if streambase != "" {
+		goatapi.SetStreamBase(streambase)
+	}
+
 	// allow config to override the cache directory
 	cachedir := cfg.Section("").Key("cachedir").MustString("")
 	if cachedir != "" {
@@ -186,9 +192,10 @@ func createConfig(confFile string) {
 # this configuration file defines defaults for goatCLI
 #
 
-# apibase lets you override the default API location
+# apibase and streambase let you override the default API locations
 # useful only for compatible APIs, i.e. proxies, API development, ...
 apibase = ""
+streambase = ""
 
 # cachedir defines where to put cache files (ie. probe data)
 cachedir = "~/.cache/goat/"
