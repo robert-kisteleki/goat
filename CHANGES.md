@@ -1,5 +1,9 @@
 # goatCLI changelog
 
+## next
+
+* NEW: add support for measurement status checks (status subcommand)
+
 ## v0.3.0
 
 * NEW: add option to stream results from the result stream instead of the data API
