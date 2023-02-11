@@ -26,11 +26,12 @@ var (
 	flagAPIEnvKey string
 
 	// subcommand specific arguments
-	flagsVersion    *flag.FlagSet
-	flagsFindProbe  *flag.FlagSet
-	flagsFindAnchor *flag.FlagSet
-	flagsFindMsm    *flag.FlagSet
-	flagsGetResult  *flag.FlagSet
+	flagsVersion     *flag.FlagSet
+	flagsFindProbe   *flag.FlagSet
+	flagsFindAnchor  *flag.FlagSet
+	flagsFindMsm     *flag.FlagSet
+	flagsGetResult   *flag.FlagSet
+	flagsStatusCheck *flag.FlagSet
 
 	apiKey  *uuid.UUID           // specified on the command line explicitly or via env
 	apiKeys map[string]uuid.UUID // collected from config file
@@ -103,13 +104,15 @@ func configure() {
 	flagsFindAnchor = flag.NewFlagSet("anchor", flag.ExitOnError)
 	flagsFindMsm = flag.NewFlagSet("measurement", flag.ExitOnError)
 	flagsGetResult = flag.NewFlagSet("result", flag.ExitOnError)
+	flagsStatusCheck = flag.NewFlagSet("status", flag.ExitOnError)
 
 	Subcommands = map[string]*flag.FlagSet{
-		flagsVersion.Name():    flagsVersion,
-		flagsFindProbe.Name():  flagsFindProbe,
-		flagsFindAnchor.Name(): flagsFindAnchor,
-		flagsFindMsm.Name():    flagsFindMsm,
-		flagsGetResult.Name():  flagsGetResult,
+		flagsVersion.Name():     flagsVersion,
+		flagsFindProbe.Name():   flagsFindProbe,
+		flagsFindAnchor.Name():  flagsFindAnchor,
+		flagsFindMsm.Name():     flagsFindMsm,
+		flagsGetResult.Name():   flagsGetResult,
+		flagsStatusCheck.Name(): flagsStatusCheck,
 	}
 	setupFlags()
 

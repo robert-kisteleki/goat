@@ -33,6 +33,8 @@ func commandSelector() {
 		commandFindMsm(args[1:])
 	case args[0] == "result":
 		commandResult(args[1:])
+	case args[0] == "status":
+		commandStatusCheck(args[1:])
 	default:
 		commandHelp()
 	}

@@ -66,6 +66,8 @@ func process(res any) {
 		fmt.Println(t.Probe.LongString())
 	case goatapi.AsyncMeasurementResult:
 		fmt.Println(t.Measurement.LongString())
+	case goatapi.AsyncStatusCheckResult:
+		fmt.Println(t.Status.LongString())
 	default:
 		fmt.Printf("No output formatter defined for object type '%T'\n", t)
 	}

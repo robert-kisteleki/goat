@@ -54,8 +54,6 @@ func process(res any) {
 			fmt.Println(SomeOutputConnection(rt))
 		case *result.UptimeResult:
 			fmt.Println(SomeOutputUptime(rt))
-		default:
-			fmt.Printf("No output formatter defined for result type '%T'\n", rt)
 		}
 	case goatapi.AsyncAnchorResult:
 		fmt.Println(t.Anchor.ShortString())
@@ -63,6 +61,8 @@ func process(res any) {
 		fmt.Println(t.Probe.ShortString())
 	case goatapi.AsyncMeasurementResult:
 		fmt.Println(t.Measurement.ShortString())
+	case goatapi.AsyncStatusCheckResult:
+		fmt.Println(t.Status.ShortString())
 	default:
 		fmt.Printf("No output formatter defined for object type '%T'\n", t)
 	}
