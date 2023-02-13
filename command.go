@@ -9,6 +9,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 // Figure out which subcommand was requested
@@ -46,4 +47,21 @@ func commandHelp() {
 
 func commandVersion() {
 	fmt.Println(CLIName)
+}
+
+// general usage text
+func printUsage() {
+	fmt.Printf("Usage: %s [options] <command> [flags]\n", os.Args[0])
+	fmt.Println("")
+	fmt.Println("Available commands are:")
+	fmt.Println("	help             this page")
+	fmt.Println("	version          print version")
+	fmt.Println("	fp|findprobe     search for probes")
+	fmt.Println("	fa|findanchor    search for achors")
+	fmt.Println("	fm|findmsm       search for measurements")
+	fmt.Println("	result           download results")
+	fmt.Println("	status           measurement status check")
+	fmt.Println("")
+	fmt.Println("Options:")
+	flag.PrintDefaults()
 }
