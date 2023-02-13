@@ -82,11 +82,11 @@ func parseStatusCheckArgs(args []string) *statusCheckFlags {
 	var flags statusCheckFlags
 
 	// filters
-	flagsStatusCheck.UintVar(&flags.filterID, "id", 0, "Measurement ID to check status for.")
-	flagsStatusCheck.BoolVar(&flags.filterAllRTTs, "all", false, "Retrieve all recent RTTs?")
+	flagsStatusCheck.UintVar(&flags.filterID, "id", 0, "Measurement ID to check status for")
+	flagsStatusCheck.BoolVar(&flags.filterAllRTTs, "all", false, "Retrieve all recent RTTs")
 
 	// options
-	flagsStatusCheck.StringVar(&flags.output, "output", "some", "Output format: 'id', 'idcsv', 'some' or 'most'")
+	flagsStatusCheck.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
 	flagsStatusCheck.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	flagsStatusCheck.Parse(args)
