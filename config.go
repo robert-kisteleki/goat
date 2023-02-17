@@ -32,6 +32,7 @@ var (
 	flagsFindMsm     *flag.FlagSet
 	flagsGetResult   *flag.FlagSet
 	flagsStatusCheck *flag.FlagSet
+	flagsMeasure     *flag.FlagSet
 
 	apiKey  *uuid.UUID           // specified on the command line explicitly or via env
 	apiKeys map[string]uuid.UUID // collected from config file
@@ -89,6 +90,7 @@ func configure() {
 	flagsFindMsm = flag.NewFlagSet("measurement", flag.ExitOnError)
 	flagsGetResult = flag.NewFlagSet("result", flag.ExitOnError)
 	flagsStatusCheck = flag.NewFlagSet("status", flag.ExitOnError)
+	flagsMeasure = flag.NewFlagSet("measure", flag.ExitOnError)
 
 	Subcommands = map[string]*flag.FlagSet{
 		flagsVersion.Name():     flagsVersion,
@@ -97,6 +99,7 @@ func configure() {
 		flagsFindMsm.Name():     flagsFindMsm,
 		flagsGetResult.Name():   flagsGetResult,
 		flagsStatusCheck.Name(): flagsStatusCheck,
+		flagsMeasure.Name():     flagsStatusCheck,
 	}
 	setupFlags()
 
@@ -192,6 +195,9 @@ cachedir = ""
 
 # List your measurements
 list_measurements = ""
+
+# Create new measurement(s)
+create_measurements = ""
 `)
 
 	if flagVerbose {
