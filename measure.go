@@ -17,8 +17,10 @@ import (
 
 // struct to receive/store command line args for new measurements
 type measureFlags struct {
-	output  string
-	outopts multioption
+	probetaginc string
+	probetagexc string
+	output      string
+	outopts     multioption
 }
 
 // Implementation of the "measure" subcommand. Parses command line flags
@@ -57,7 +59,7 @@ func commandMeasure(args []string) {
 
 // Process flags (options), pass most of them on to goatAPI
 // while doing sanity checks on values
-func processMeasureFlags(flags *statusCheckFlags) (
+func processMeasureFlags(flags *measureFlags) (
 	spec *goatapi.MeasurementSpec,
 	options map[string]any,
 ) {
@@ -72,13 +74,10 @@ func processMeasureFlags(flags *statusCheckFlags) (
 	spec.Start(time.Now().Add(time.Second * 40)) // TODO is this ok
 	spec.Stop(time.Now().Add(time.Minute * 40))  // TODO is this ok
 
-	spec.AddPing("ping1", "ping.ripe.net", true, 4, nil)
-	spec.AddPing("ping2", "ping.ripe.net", true, 6, &goatapi.PingOptions{
-		SkipDNSCheck:   true,
+	spec.AddPing("ping1", "ping.ripe.net", 4, nil, nil)
+	spec.AddPing("ping2", "ping.ripe.net", 6, nil, &goatapi.PingOptions{
 		PacketSize:     999,
 		IncludeProbeID: true,
-		Interval:       88,
-		Tags:           []string{"r", "rr"},
 	})
 
 	// options
@@ -89,8 +88,11 @@ func processMeasureFlags(flags *statusCheckFlags) (
 }
 
 // Define and parse command line args for this subcommand using the flags package
-func parseMeasureArgs(args []string) *statusCheckFlags {
-	var flags statusCheckFlags
+func parseMeasureArgs(args []string) *measureFlags {
+	var flags measureFlags
+
+	flagsMeasure.StringVar(&flags.probetaginc, "probetaginc", "", "Probe tags to include (comma separated list)")
+	flagsMeasure.StringVar(&flags.probetagexc, "probetagexc", "", "Probe tags to exclude (comma separated list)")
 
 	// options
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
