@@ -43,7 +43,7 @@ func commandFindAnchor(args []string) {
 
 	// counting only
 	if _, ok := options["count"]; ok {
-		count, err := filter.GetAnchorCount(flagVerbose)
+		count, err := filter.GetAnchorCount()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 			os.Exit(1)
@@ -54,7 +54,7 @@ func commandFindAnchor(args []string) {
 
 	// most of the work is done by goatAPI
 	anchors := make(chan goatapi.AsyncAnchorResult)
-	go filter.GetAnchors(flagVerbose, anchors)
+	go filter.GetAnchors(anchors)
 
 	// produce output; exact format depends on the "format" option
 	output.Setup(formatter, flagVerbose, flags.outopts)
@@ -78,6 +78,7 @@ func processFindAnchorFlags(flags *findAnchorFlags) (
 ) {
 	options = make(map[string]any)
 	filter = goatapi.NewAnchorFilter()
+	filter.Verbose(flagVerbose)
 
 	// options
 

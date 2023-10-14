@@ -137,6 +137,7 @@ func readConfig(confFile string) bool {
 
 	// record stuff that was in the config file
 	loadApiKey(cfg, "list_measurements")
+	loadApiKey(cfg, "create_measurements")
 	// TODO: add more API key variations here
 
 	// allow config to override where the API is

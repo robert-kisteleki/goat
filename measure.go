@@ -35,8 +35,13 @@ func commandMeasure(args []string) {
 		os.Exit(1)
 	}
 
+	if getApiKey("create_measurements") == nil {
+		fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key create_measurement - please consult the config file\n")
+		os.Exit(1)
+	}
+
 	// most of the work is done by goatAPI
-	err := spec.Submit(flagVerbose)
+	err := spec.Submit()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
@@ -65,6 +70,9 @@ func processMeasureFlags(flags *measureFlags) (
 ) {
 	options = make(map[string]any)
 	spec = goatapi.NewMeasurementSpec()
+	spec.Verbose(flagVerbose)
+
+	spec.ApiKey(getApiKey("create_measurements"))
 
 	spec.AddProbesCountryWithTags("HU", 50, &[]string{"i1, i2"}, &[]string{"e1", "e2"})
 	spec.AddProbesArea("WW", 10)
