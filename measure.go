@@ -9,7 +9,10 @@ package main
 import (
 	"fmt"
 	"goatcli/output"
+	"net/netip"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/robert-kisteleki/goatapi"
@@ -17,18 +20,36 @@ import (
 
 // struct to receive/store command line args for new measurements
 type measureFlags struct {
+	specOnly bool
+	output   string
+	outopts  multioption
+
 	probetaginc string
 	probetagexc string
-	output      string
-	outopts     multioption
+	probecc     string
+	probearea   string
+	probeasn    string
+	probeprefix string
+	probelist   string
+	probereuse  string
 }
 
 // Implementation of the "measure" subcommand. Parses command line flags
-// and interacts with goatAPI to initiate new mwasurements
+// and interacts with goatAPI to initiate new measurements
 func commandMeasure(args []string) {
 	flags := parseMeasureArgs(args)
 	spec, options := processMeasureFlags(flags)
 	formatter := options["output"].(string)
+
+	if flags.specOnly {
+		json, err := spec.GetApiJson()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(string(json))
+		return
+	}
 
 	if !output.Verify(formatter) {
 		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
@@ -74,14 +95,26 @@ func processMeasureFlags(flags *measureFlags) (
 
 	spec.ApiKey(getApiKey("create_measurements"))
 
-	spec.AddProbesCountryWithTags("HU", 50, &[]string{"i1, i2"}, &[]string{"e1", "e2"})
-	spec.AddProbesArea("WW", 10)
-	spec.AddProbesList([]uint{1, 2, 3})
-	spec.AddProbesReuse(10000009, 9)
+	// process probe sepcification(s)
+	var probetaginc, probetagexc []string
+	if flags.probetaginc != "" {
+		probetaginc = strings.Split(flags.probetaginc, ",")
+	}
+	if flags.probetagexc != "" {
+		probetagexc = strings.Split(flags.probetagexc, ",")
+	}
+	parseProbeSpec("cc", flags.probecc, spec, &probetaginc, &probetagexc)
+	parseProbeSpec("area", flags.probearea, spec, &probetaginc, &probetagexc)
+	parseProbeSpec("asn", flags.probeasn, spec, &probetaginc, &probetagexc)
+	parseProbeSpec("prefix", flags.probeprefix, spec, &probetaginc, &probetagexc)
+	parseProbeSpec("reuse", flags.probereuse, spec, &probetaginc, &probetagexc)
+	parseProbeListSpec(flags.probelist, spec, &probetaginc, &probetagexc)
 
+	// process timing
 	spec.Start(time.Now().Add(time.Second * 40)) // TODO is this ok
 	spec.Stop(time.Now().Add(time.Minute * 40))  // TODO is this ok
 
+	// process measurement specification
 	spec.AddPing("ping1", "ping.ripe.net", 4, nil, nil)
 	spec.AddPing("ping2", "ping.ripe.net", 6, nil, &goatapi.PingOptions{
 		PacketSize:     999,
@@ -89,7 +122,6 @@ func processMeasureFlags(flags *measureFlags) (
 	})
 
 	// options
-
 	options["output"] = flags.output
 
 	return
@@ -99,8 +131,18 @@ func processMeasureFlags(flags *measureFlags) (
 func parseMeasureArgs(args []string) *measureFlags {
 	var flags measureFlags
 
+	// generic flags
+	flagsMeasure.BoolVar(&flags.specOnly, "json", false, "Output the specification only, don't schedule the measurement")
+
+	// probe selection
 	flagsMeasure.StringVar(&flags.probetaginc, "probetaginc", "", "Probe tags to include (comma separated list)")
 	flagsMeasure.StringVar(&flags.probetagexc, "probetagexc", "", "Probe tags to exclude (comma separated list)")
+	flagsMeasure.StringVar(&flags.probecc, "probecc", "", "Probes to select from country (comma separated list of amount@CC)")
+	flagsMeasure.StringVar(&flags.probearea, "probearea", "", "Probes to select from area (comma separated list of amount@area, area can be ww/west/nc/sc/ne/se)")
+	flagsMeasure.StringVar(&flags.probeasn, "probeasn", "", "Probes to select from an ASN (comma separated list of amount@ASN)")
+	flagsMeasure.StringVar(&flags.probeprefix, "probeprefix", "", "Probes to select from a prefix (comma separated list of amount@prefix)")
+	flagsMeasure.StringVar(&flags.probelist, "probelist", "", "Probes to use provided as a comma separated list")
+	flagsMeasure.StringVar(&flags.probereuse, "probereuse", "", "Probes to reuse from a previous measurement as amount@msmID")
 
 	// options
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
@@ -109,4 +151,103 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.Parse(args)
 
 	return &flags
+}
+
+// parse probe spec as a list of amount@spec
+func parseProbeSpec(
+	spectype string,
+	from string,
+	spec *goatapi.MeasurementSpec,
+	probetaginc, probetagexc *[]string,
+) {
+	if from == "" {
+		return
+	}
+
+	list := strings.Split(from, ",")
+	for _, item := range list {
+		split := strings.Split(item, "@")
+		if len(split) != 2 {
+			fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe %s spec: '%s'\n", spectype, item)
+			os.Exit(1)
+		}
+		n := 0
+		var err error
+		if split[1] == "all" {
+			n = -1
+		} else {
+			n, err = strconv.Atoi(split[0])
+			if err != nil || n <= 0 {
+				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe %s amount: '%s'\n", spectype, split[0])
+				os.Exit(1)
+			}
+		}
+		switch spectype {
+		case "cc":
+			if len(split[1]) != 2 { // TODO: proper CC validation
+				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe CC spec: invalid CC (in %s)\n", split[1])
+				os.Exit(1)
+			}
+			spec.AddProbesCountryWithTags(split[1], n, probetaginc, probetagexc)
+		case "asn":
+			specval, err := strconv.Atoi(split[1])
+			if err != nil || specval <= 0 {
+				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe ASN spec: '%s'\n", split[1])
+				os.Exit(1)
+			}
+			spec.AddProbesAsnWithTags(uint(specval), n, probetaginc, probetagexc)
+		case "prefix":
+			prefix, err := netip.ParsePrefix(split[1])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe prefix spec: '%s'\n", split[1])
+				os.Exit(1)
+			}
+			spec.AddProbesPrefixWithTags(prefix, n, probetaginc, probetagexc)
+		case "reuse":
+			msmid, err := strconv.Atoi(split[1])
+			if err != nil || msmid <= 1000000 {
+				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe reuse measurement ID: '%s'\n", split[1])
+				os.Exit(1)
+			}
+			spec.AddProbesReuseWithTags(uint(msmid), n, probetaginc, probetagexc)
+		case "area":
+			var areas map[string]string = map[string]string{
+				"ww":   "WW",
+				"west": "West",
+				"nc":   "North-Central",
+				"sc":   "South-Central",
+				"ne":   "North-East",
+				"se":   "South-East",
+			}
+			area, ok := areas[split[1]]
+			if !ok {
+				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe area spec: unknown area '%s'\n", split[1])
+				os.Exit(1)
+			}
+			spec.AddProbesAreaWithTags(area, n, probetaginc, probetagexc)
+		}
+	}
+}
+
+// parse probe list spec as a list of probe IDs
+func parseProbeListSpec(
+	from string,
+	spec *goatapi.MeasurementSpec,
+	probetaginc, probetagexc *[]string,
+) {
+	if from == "" {
+		return
+	}
+
+	list := make([]uint, 0)
+	plist := strings.Split(from, ",")
+	for _, pid := range plist {
+		n, err := strconv.Atoi(pid)
+		if err != nil || n <= 0 {
+			fmt.Fprintf(os.Stderr, "ERROR: invalid probe ID %s\n", pid)
+			os.Exit(1)
+		}
+		list = append(list, uint(n))
+	}
+	spec.AddProbesListWithTags(list, probetaginc, probetagexc)
 }
