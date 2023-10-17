@@ -32,6 +32,9 @@ type measureFlags struct {
 	probeprefix string
 	probelist   string
 	probereuse  string
+	ongoing     bool
+	start       string
+	stop        string
 }
 
 // Implementation of the "measure" subcommand. Parses command line flags
@@ -111,8 +114,8 @@ func processMeasureFlags(flags *measureFlags) (
 	parseProbeListSpec(flags.probelist, spec, &probetaginc, &probetagexc)
 
 	// process timing
-	spec.Start(time.Now().Add(time.Second * 40)) // TODO is this ok
-	spec.Stop(time.Now().Add(time.Minute * 40))  // TODO is this ok
+	spec.OneOff(!flags.ongoing)
+	parseStartStop(spec, !flags.ongoing, flags.start, flags.stop)
 
 	// process measurement specification
 	spec.AddPing("ping1", "ping.ripe.net", 4, nil, nil)
@@ -143,6 +146,11 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.StringVar(&flags.probeprefix, "probeprefix", "", "Probes to select from a prefix (comma separated list of amount@prefix)")
 	flagsMeasure.StringVar(&flags.probelist, "probelist", "", "Probes to use provided as a comma separated list")
 	flagsMeasure.StringVar(&flags.probereuse, "probereuse", "", "Probes to reuse from a previous measurement as amount@msmID")
+
+	// timing
+	flagsMeasure.BoolVar(&flags.ongoing, "ongoing", false, "Schedule an ongoing measurement instead of a one-off")
+	flagsMeasure.StringVar(&flags.start, "start", "", "When to start this measurement")
+	flagsMeasure.StringVar(&flags.stop, "stop", "", "When to stop this measurement (if it's ongoing)")
 
 	// options
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
@@ -250,4 +258,38 @@ func parseProbeListSpec(
 		list = append(list, uint(n))
 	}
 	spec.AddProbesListWithTags(list, probetaginc, probetagexc)
+}
+
+func parseStartStop(
+	spec *goatapi.MeasurementSpec,
+	oneoff bool,
+	start string,
+	stop string,
+) {
+	starttime, starterr := parseTimeAlternatives(start)
+	stoptime, stoperr := parseTimeAlternatives(stop)
+
+	if oneoff && stoperr == nil {
+		fmt.Fprintf(os.Stderr, "ERROR: one-offs cannot have a stop time\n")
+		os.Exit(1)
+	}
+	if starterr == nil && starttime.Unix() <= time.Now().Unix() {
+		fmt.Fprintf(os.Stderr, "ERROR: start time cannot be in the past\n")
+		os.Exit(1)
+	}
+	if stoperr == nil && stoptime.Unix() <= time.Now().Unix() {
+		fmt.Fprintf(os.Stderr, "ERROR: stop time cannot be in the past\n")
+		os.Exit(1)
+	}
+	if starterr == nil && stoperr == nil && starttime.Unix() >= stoptime.Unix() {
+		fmt.Fprintf(os.Stderr, "ERROR: start time has to be before stop time\n")
+		os.Exit(1)
+	}
+
+	if starterr == nil {
+		spec.Start(starttime)
+	}
+	if stoperr == nil {
+		spec.Stop(stoptime)
+	}
 }
