@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/robert-kisteleki/goatapi"
+	"golang.org/x/exp/slices"
 )
 
 // struct to receive/store command line args for new measurements
@@ -24,6 +25,7 @@ type measureFlags struct {
 	output   string
 	outopts  multioption
 
+	// probe options
 	probetaginc string
 	probetagexc string
 	probecc     string
@@ -32,9 +34,33 @@ type measureFlags struct {
 	probeprefix string
 	probelist   string
 	probereuse  string
-	ongoing     bool
-	start       string
-	stop        string
+
+	// timing options
+	ongoing bool
+	start   string
+	stop    string
+
+	// common measurement options
+	msmdescr          string
+	msmtarget         string
+	msmaf             uint
+	msminterval       uint
+	msmspread         uint
+	msmresolveonprobe bool
+	msmskipdnscheck   bool
+	msmtags           string
+
+	// measurement types
+	msmping  bool
+	msmtrace bool
+	msmdns   bool
+	msmtls   bool
+	msmhttp  bool
+	msmntp   bool
+
+	// type specific measurement options
+	msmoptname   string // DNS: name to look up
+	msmoptmethod string // HTTP: method (GET, POST, HEAD)
 }
 
 // Implementation of the "measure" subcommand. Parses command line flags
@@ -43,6 +69,11 @@ func commandMeasure(args []string) {
 	flags := parseMeasureArgs(args)
 	spec, options := processMeasureFlags(flags)
 	formatter := options["output"].(string)
+
+	if flags.msmaf != 4 && flags.msmaf != 6 {
+		fmt.Fprintf(os.Stderr, "ERROR: invalid address family, it should be 4 or 6\n")
+		os.Exit(1)
+	}
 
 	if flags.specOnly {
 		json, err := spec.GetApiJson()
@@ -118,11 +149,12 @@ func processMeasureFlags(flags *measureFlags) (
 	parseStartStop(spec, !flags.ongoing, flags.start, flags.stop)
 
 	// process measurement specification
-	spec.AddPing("ping1", "ping.ripe.net", 4, nil, nil)
-	spec.AddPing("ping2", "ping.ripe.net", 6, nil, &goatapi.PingOptions{
-		PacketSize:     999,
-		IncludeProbeID: true,
-	})
+	parseMeasurementPing(flags, spec)
+	parseMeasurementTraceroute(flags, spec)
+	parseMeasurementDns(flags, spec)
+	parseMeasurementTls(flags, spec)
+	parseMeasurementHttp(flags, spec)
+	parseMeasurementNtp(flags, spec)
 
 	// options
 	options["output"] = flags.output
@@ -151,6 +183,27 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.BoolVar(&flags.ongoing, "ongoing", false, "Schedule an ongoing measurement instead of a one-off")
 	flagsMeasure.StringVar(&flags.start, "start", "", "When to start this measurement")
 	flagsMeasure.StringVar(&flags.stop, "stop", "", "When to stop this measurement (if it's ongoing)")
+
+	// measurement types
+	flagsMeasure.BoolVar(&flags.msmping, "ping", false, "Schedule a ping measurement")
+	flagsMeasure.BoolVar(&flags.msmtrace, "trace", false, "Schedule a traceroute measurement")
+	flagsMeasure.BoolVar(&flags.msmdns, "dns", false, "Schedule a DNS measurement")
+	flagsMeasure.BoolVar(&flags.msmtls, "tls", false, "Schedule a TLS measurement")
+	flagsMeasure.BoolVar(&flags.msmhttp, "http", false, "Schedule a HTTP measurement")
+	flagsMeasure.BoolVar(&flags.msmntp, "ntp", false, "Schedule a NTP measurement")
+
+	// measurement common flags
+	flagsMeasure.UintVar(&flags.msmaf, "af", 4, "Address family: 4 for IPv4 or 6 for IPv6")
+	flagsMeasure.StringVar(&flags.msmtarget, "target", "", "Target of the measurement")
+	flagsMeasure.BoolVar(&flags.msmresolveonprobe, "resolveonprobe", true, "The probe should do the DNS resolution")
+	flagsMeasure.BoolVar(&flags.msmskipdnscheck, "skipdnscheck", false, "Skip DNS check upon creation")
+	flagsMeasure.UintVar(&flags.msminterval, "interval", 0, "Interval for an ongoing measurement")
+	flagsMeasure.UintVar(&flags.msmspread, "spread", 0, "Spread for an ongoing measurement")
+	flagsMeasure.StringVar(&flags.msmtags, "tags", "", "Tags for a measurement")
+
+	// measurement type specific options
+	flagsMeasure.StringVar(&flags.msmoptname, "name", "", "DNS: name to look up")
+	flagsMeasure.StringVar(&flags.msmoptmethod, "method", "", "HTTP: method to use (HEAD, GET, POST)")
 
 	// options
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
@@ -291,5 +344,196 @@ func parseStartStop(
 	}
 	if stoperr == nil {
 		spec.Stop(stoptime)
+	}
+}
+
+func processBaseOptions(flags *measureFlags) *goatapi.BaseOptions {
+	opts := goatapi.BaseOptions{}
+	if flags.msminterval != 0 {
+		opts.Interval = flags.msminterval
+	}
+	if flags.msmspread != 0 {
+		opts.Spread = flags.msmspread
+	}
+	opts.ResolveOnProbe = flags.msmresolveonprobe
+	opts.SkipDNSCheck = flags.msmskipdnscheck
+	if flags.msmtags != "" {
+		opts.Tags = strings.Split(flags.msmtags, ",")
+	}
+	return &opts
+}
+
+func parseMeasurementPing(
+	flags *measureFlags,
+	spec *goatapi.MeasurementSpec,
+) {
+	if !flags.msmping {
+		return
+	}
+
+	if flags.msmtarget == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
+		os.Exit(1)
+	}
+
+	descr := flags.msmdescr
+	if descr == "" {
+		descr = fmt.Sprintf("Ping measurement to %s", flags.msmtarget)
+	}
+
+	baseopts := processBaseOptions(flags)
+	err := spec.AddPing(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseMeasurementTraceroute(
+	flags *measureFlags,
+	spec *goatapi.MeasurementSpec,
+) {
+	if !flags.msmtrace {
+		return
+	}
+
+	if flags.msmtarget == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
+		os.Exit(1)
+	}
+
+	descr := flags.msmdescr
+	if descr == "" {
+		descr = fmt.Sprintf("Traceroute measurement to %s", flags.msmtarget)
+	}
+	baseopts := processBaseOptions(flags)
+	err := spec.AddTrace(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseMeasurementDns(
+	flags *measureFlags,
+	spec *goatapi.MeasurementSpec,
+) {
+	if !flags.msmdns {
+		return
+	}
+
+	if flags.msmoptname == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: a name to be looked up should be specified\n")
+		os.Exit(1)
+	}
+
+	descr := flags.msmdescr
+	if descr == "" {
+		descr = fmt.Sprintf("DNS lookup of %s", flags.msmoptname)
+		if flags.msmtarget != "" {
+			descr += " @" + flags.msmtarget
+		}
+	}
+	baseopts := processBaseOptions(flags)
+	baseopts.ResolveOnProbe = false
+	dnsopts := goatapi.DnsOptions{}
+	dnsopts.Argument = flags.msmoptname
+	dnsopts.UseResolver = flags.msmtarget == ""
+	err := spec.AddDns(descr, flags.msmtarget, flags.msmaf, baseopts, &dnsopts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseMeasurementTls(
+	flags *measureFlags,
+	spec *goatapi.MeasurementSpec,
+) {
+	if !flags.msmtls {
+		return
+	}
+
+	if flags.msmtarget == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
+		os.Exit(1)
+	}
+
+	descr := flags.msmdescr
+	if descr == "" {
+		descr = fmt.Sprintf("TLS measurement to %s", flags.msmtarget)
+	}
+	baseopts := processBaseOptions(flags)
+	err := spec.AddTls(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseMeasurementHttp(
+	flags *measureFlags,
+	spec *goatapi.MeasurementSpec,
+) {
+	if !flags.msmhttp {
+		return
+	}
+
+	if flags.msmtarget == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
+		os.Exit(1)
+	}
+
+	target, http := strings.CutPrefix(flags.msmtarget, "http://")
+	if !http {
+		fmt.Fprintf(os.Stderr, "ERROR: a target should start with http://\n")
+		os.Exit(1)
+	}
+	server, path, _ := strings.Cut(target, "/")
+
+	descr := flags.msmdescr
+	if descr == "" {
+		descr = fmt.Sprintf("HTTP measurement to %s", flags.msmtarget)
+	}
+	baseopts := processBaseOptions(flags)
+	httpopts := goatapi.HttpOptions{}
+	httpopts.Path = "/" + path
+	if flags.msmoptmethod != "" {
+		methods := []string{"HEAD", "GET", "PUT"}
+		if !slices.Contains(methods, flags.msmoptmethod) {
+			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported HTTP method: '%s'\n", flags.msmoptmethod)
+			os.Exit(1)
+		}
+		httpopts.Method = flags.msmoptmethod
+	}
+	err := spec.AddHttp(descr, server, flags.msmaf, baseopts, &httpopts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseMeasurementNtp(
+	flags *measureFlags,
+	spec *goatapi.MeasurementSpec,
+) {
+	if !flags.msmntp {
+		return
+	}
+
+	if flags.msmtarget == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
+		os.Exit(1)
+	}
+
+	descr := flags.msmdescr
+	if descr == "" {
+		descr = fmt.Sprintf("NTP measurement to %s", flags.msmtarget)
+	}
+	baseopts := processBaseOptions(flags)
+	err := spec.AddNtp(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
 	}
 }
