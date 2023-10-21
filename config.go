@@ -36,6 +36,13 @@ var (
 
 	apiKey  *uuid.UUID           // specified on the command line explicitly or via env
 	apiKeys map[string]uuid.UUID // collected from config file
+
+	probeSpecCc     string
+	probeSpecArea   string
+	probeSpecAsn    string
+	probeSpecPrefix string
+	probeSpecList   string
+	probeSpecReuse  string
 )
 
 const version = "v0.3.0+"
@@ -160,6 +167,14 @@ func readConfig(confFile string) bool {
 	// we deliberately ignore errors on creating this dir as it may exist
 	_ = os.MkdirAll(CacheDir, os.FileMode(0755))
 
+	// load probe specification defaults
+	probeSpecCc = cfg.Section("probespec").Key("probecc").MustString("")
+	probeSpecArea = cfg.Section("probespec").Key("probearea").MustString("")
+	probeSpecAsn = cfg.Section("probespec").Key("probeasn").MustString("")
+	probeSpecPrefix = cfg.Section("probespec").Key("probeprefix").MustString("")
+	probeSpecList = cfg.Section("probespec").Key("probelist").MustString("")
+	probeSpecReuse = cfg.Section("probespec").Key("probereuse").MustString("")
+
 	return true
 }
 
@@ -199,6 +214,15 @@ list_measurements = ""
 
 # Create new measurement(s)
 create_measurements = ""
+
+# default probe specifications for new measurements
+[probespec]
+probecc = ""
+probearea = ""
+probeasn = ""
+probeprefix = ""
+probelist = ""
+probereuse = ""
 `)
 
 	if flagVerbose {
@@ -238,4 +262,23 @@ func getApiKey(function string) *uuid.UUID {
 	}
 
 	return nil
+}
+
+func getProbeSpecDefault(spec string) string {
+	switch spec {
+	case "cc":
+		return probeSpecCc
+	case "area":
+		return probeSpecArea
+	case "asn":
+		return probeSpecAsn
+	case "prefix":
+		return probeSpecPrefix
+	case "list":
+		return probeSpecList
+	case "reuse":
+		return probeSpecReuse
+	default:
+		return ""
+	}
 }

@@ -163,6 +163,46 @@ func processMeasureFlags(flags *measureFlags) (
 	if flags.probetagexc != "" {
 		probetagexc = strings.Split(flags.probetagexc, ",")
 	}
+
+	// apply defaults from the config file if nothing was specified
+	if flags.probecc == "" &&
+		flags.probearea == "" &&
+		flags.probeasn == "" &&
+		flags.probeprefix == "" &&
+		flags.probereuse == "" &&
+		flags.probelist == "" {
+
+		if flags.probecc == "" {
+			flags.probecc = getProbeSpecDefault("cc")
+		}
+		if flags.probearea == "" {
+			flags.probearea = getProbeSpecDefault("area")
+		}
+		if flags.probeasn == "" {
+			flags.probeasn = getProbeSpecDefault("asn")
+		}
+		if flags.probeprefix == "" {
+			flags.probeprefix = getProbeSpecDefault("prefix")
+		}
+		if flags.probereuse == "" {
+			flags.probereuse = getProbeSpecDefault("reuse")
+		}
+		if flags.probelist == "" {
+			flags.probelist = getProbeSpecDefault("list")
+		}
+
+		// last resort: add 10 probes world wide
+		if flags.probecc == "" &&
+			flags.probearea == "" &&
+			flags.probeasn == "" &&
+			flags.probeprefix == "" &&
+			flags.probereuse == "" &&
+			flags.probelist == "" {
+			parseProbeSpec("area", "10@ww", spec, &probetaginc, &probetagexc)
+		}
+	}
+
+	// parse probe specifications
 	parseProbeSpec("cc", flags.probecc, spec, &probetaginc, &probetagexc)
 	parseProbeSpec("area", flags.probearea, spec, &probetaginc, &probetagexc)
 	parseProbeSpec("asn", flags.probeasn, spec, &probetaginc, &probetagexc)
