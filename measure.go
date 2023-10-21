@@ -59,9 +59,35 @@ type measureFlags struct {
 	msmntp   bool
 
 	// type specific measurement options
-	msmoptname   string // DNS: name to look up
-	msmoptmethod string // HTTP: method (GET, POST, HEAD)
+	msmoptname     string // DNS: name to look up
+	msmoptmethod   string // HTTP: method (GET, POST, HEAD)
+	msmoptparis    uint   // TRACE: paris ID
+	msmoptprotocol string // TRACE: protocol (UDP, TCP, ICMP), DNS: protocol (UDP, TCP)
+	msmoptminhop   uint   // TRACE: first hop
+	msmoptmaxhop   uint   // TRACE: last hop
+	msmoptnsid     bool   // DNS: set NSID
+	msmoptqbuf     bool   // DNS: store qbuf
+	msmoptabuf     bool   // DNS: store abuf
+	msmoptrd       bool   // DNS: RD bit
+	msmoptdo       bool   // DNS: DO bit
+	msmoptcd       bool   // DNS: CD bit
+	msmoptretry    uint   // DNS: retry count
+	msmoptclass    string // DNS: class (IN, CHAOS)
+	msmopttype     string // DNS: type (A, AAAA, NS, CNAME, ...)
+	msmoptport     uint   // TLS, HTTP: port number
+	msmoptversion  string // HTTP: version (1.0, 1.1)
+	msmopttiming1  bool   // HTTP: extended timing
+	msmopttiming2  bool   // HTTP: more extended timing
 }
+
+var dnstypes = []string{
+	"A", "AAAA", "ANY", "CNAME", "DNSKEY", "DS", "MX", "NS", "NSEC", "PTR", "RRSIG", "SOA", "TXT", "SRV", "NAPTR", "TLSA",
+}
+var dnsclasses = []string{"IN", "CHAOS"}
+var dnsprotocols = []string{"UDP", "TCP"}
+var traceprotocols = []string{"UDP", "TCP", "ICMP"}
+var httpmethods = []string{"HEAD", "GET", "POST"}
+var httpversions = []string{"1.0", "1.1"}
 
 // Implementation of the "measure" subcommand. Parses command line flags
 // and interacts with goatAPI to initiate new measurements
@@ -202,14 +228,37 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.StringVar(&flags.msmtags, "tags", "", "Tags for a measurement")
 
 	// measurement type specific options
+	flagsMeasure.UintVar(&flags.msmoptparis, "paris", 16, "TRACE: paris ID")
+	flagsMeasure.StringVar(&flags.msmoptprotocol, "proto", "UDP", "TRACE, DNS: protocol to use (UDP, TCP, ICMP or UDP, TCP)")
+	flagsMeasure.UintVar(&flags.msmoptminhop, "minhop", 1, "TRACE: first hop")
+	flagsMeasure.UintVar(&flags.msmoptmaxhop, "maxhop", 32, "TRACE: last hop")
 	flagsMeasure.StringVar(&flags.msmoptname, "name", "", "DNS: name to look up")
-	flagsMeasure.StringVar(&flags.msmoptmethod, "method", "", "HTTP: method to use (HEAD, GET, POST)")
+	flagsMeasure.BoolVar(&flags.msmoptnsid, "nsid", false, "DNS: ask for NSID")
+	flagsMeasure.BoolVar(&flags.msmoptqbuf, "qbuf", false, "DNS: ask for qbuf")
+	flagsMeasure.BoolVar(&flags.msmoptabuf, "abuf", false, "DNS: ask for abuf")
+	flagsMeasure.BoolVar(&flags.msmoptrd, "rd", false, "DNS: set RD bit")
+	flagsMeasure.BoolVar(&flags.msmoptdo, "do", false, "DNS: set DO bit")
+	flagsMeasure.BoolVar(&flags.msmoptcd, "cd", false, "DNS: set CD bit")
+	flagsMeasure.UintVar(&flags.msmoptretry, "retry", 0, "DNS: retry count")
+	flagsMeasure.StringVar(&flags.msmoptclass, "class", "IN", "DNS: query class (IN, CHAOS)")
+	flagsMeasure.StringVar(&flags.msmopttype, "type", "A", "DNS: query type (A, AAAA, NS, CNAME, ...)")
+	flagsMeasure.StringVar(&flags.msmoptmethod, "method", "HEAD", "HTTP: method to use (HEAD, GET, POST)")
+	flagsMeasure.UintVar(&flags.msmoptport, "port", 0, "TLS: port number")
+	flagsMeasure.StringVar(&flags.msmoptversion, "version", "1.0", "HTTP: version to use (1.0, 1.1)")
+	flagsMeasure.BoolVar(&flags.msmopttiming1, "time1", false, "HTTP: extended timing")
+	flagsMeasure.BoolVar(&flags.msmopttiming2, "time2", false, "HTTP: more extended timing")
 
 	// options
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
 	flagsMeasure.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
 	flagsMeasure.Parse(args)
+
+	// orce uppercase for some
+	flags.msmoptclass = strings.ToUpper(flags.msmoptclass)
+	flags.msmopttype = strings.ToUpper(flags.msmopttype)
+	flags.msmoptmethod = strings.ToUpper(flags.msmoptmethod)
+	flags.msmoptprotocol = strings.ToUpper(flags.msmoptprotocol)
 
 	return &flags
 }
@@ -407,7 +456,35 @@ func parseMeasurementTraceroute(
 		descr = fmt.Sprintf("Traceroute measurement to %s", flags.msmtarget)
 	}
 	baseopts := processBaseOptions(flags)
-	err := spec.AddTrace(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	traceopts := goatapi.TraceOptions{}
+	if flags.msmoptparis != 16 {
+		traceopts.ParisId = flags.msmoptparis
+	}
+	if flags.msmoptprotocol != "UDP" {
+		if !slices.Contains(traceprotocols, flags.msmoptprotocol) {
+			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported TRACE protocol: '%s'\n", flags.msmoptprotocol)
+			os.Exit(1)
+		}
+		traceopts.Protocol = flags.msmoptprotocol
+	}
+	if flags.msmoptminhop == 0 ||
+		flags.msmoptminhop > 128 ||
+		flags.msmoptmaxhop == 0 ||
+		flags.msmoptmaxhop > 128 {
+		fmt.Fprintf(os.Stderr, "ERROR: minhop and maxhop should be between 1 and 128\n")
+		os.Exit(1)
+	}
+	if flags.msmoptminhop > flags.msmoptmaxhop {
+		fmt.Fprintf(os.Stderr, "ERROR: minhop should not be more than maxhop\n")
+		os.Exit(1)
+	}
+	if flags.msmoptminhop != 1 {
+		traceopts.FirstHop = flags.msmoptminhop
+	}
+	if flags.msmoptmaxhop != 32 {
+		traceopts.LastHop = flags.msmoptmaxhop
+	}
+	err := spec.AddTrace(descr, flags.msmtarget, flags.msmaf, baseopts, &traceopts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
@@ -439,6 +516,38 @@ func parseMeasurementDns(
 	dnsopts := goatapi.DnsOptions{}
 	dnsopts.Argument = flags.msmoptname
 	dnsopts.UseResolver = flags.msmtarget == ""
+	dnsopts.Nsid = flags.msmoptnsid
+
+	dnsopts.IncludeQbuf = flags.msmoptqbuf
+	dnsopts.IncludeAbuf = flags.msmoptabuf
+	dnsopts.SetRd = flags.msmoptrd
+	dnsopts.SetDo = flags.msmoptdo
+	dnsopts.SetCd = flags.msmoptcd
+	if flags.msmoptprotocol != "UDP" {
+		if !slices.Contains(dnsprotocols, flags.msmoptprotocol) {
+			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported DNS protocol: '%s'\n", flags.msmoptprotocol)
+			os.Exit(1)
+		}
+		dnsopts.Protocol = flags.msmoptprotocol
+	}
+	if flags.msmoptclass != "IN" {
+		if !slices.Contains(dnsclasses, flags.msmoptclass) {
+			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported DNS class: '%s'\n", flags.msmoptclass)
+			os.Exit(1)
+		}
+		dnsopts.Class = flags.msmoptclass
+	}
+	if flags.msmopttype != "A" {
+		if !slices.Contains(dnstypes, flags.msmopttype) {
+			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported DNS class: '%s'\n", flags.msmopttype)
+			os.Exit(1)
+		}
+		dnsopts.Type = flags.msmopttype
+	}
+	dnsopts.UseMacros = strings.Contains(flags.msmoptname, "$")
+	if flags.msmoptretry != 0 {
+		dnsopts.Retries = flags.msmoptretry
+	}
 	err := spec.AddDns(descr, flags.msmtarget, flags.msmaf, baseopts, &dnsopts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
@@ -464,7 +573,11 @@ func parseMeasurementTls(
 		descr = fmt.Sprintf("TLS measurement to %s", flags.msmtarget)
 	}
 	baseopts := processBaseOptions(flags)
-	err := spec.AddTls(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	tlsopts := goatapi.TlsOptions{}
+	if flags.msmoptport != 0 {
+		tlsopts.Port = flags.msmoptport
+	}
+	err := spec.AddTls(descr, flags.msmtarget, flags.msmaf, baseopts, &tlsopts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
@@ -490,22 +603,35 @@ func parseMeasurementHttp(
 		os.Exit(1)
 	}
 	server, path, _ := strings.Cut(target, "/")
+	path, args, _ := strings.Cut("/"+path, "?")
 
 	descr := flags.msmdescr
 	if descr == "" {
-		descr = fmt.Sprintf("HTTP measurement to %s", flags.msmtarget)
+		descr = fmt.Sprintf("HTTP measurement to %s", server)
 	}
 	baseopts := processBaseOptions(flags)
 	httpopts := goatapi.HttpOptions{}
-	httpopts.Path = "/" + path
+	httpopts.Path = path
+	httpopts.Query = args
 	if flags.msmoptmethod != "" {
-		methods := []string{"HEAD", "GET", "PUT"}
-		if !slices.Contains(methods, flags.msmoptmethod) {
+		if !slices.Contains(httpmethods, flags.msmoptmethod) {
 			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported HTTP method: '%s'\n", flags.msmoptmethod)
 			os.Exit(1)
 		}
 		httpopts.Method = flags.msmoptmethod
 	}
+	if flags.msmoptversion != "1.0" {
+		if !slices.Contains(httpversions, flags.msmoptversion) {
+			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported HTTP version: '%s'\n", flags.msmoptversion)
+			os.Exit(1)
+		}
+		httpopts.Version = flags.msmoptversion
+	}
+	if flags.msmoptport != 0 {
+		httpopts.Port = flags.msmoptport
+	}
+	httpopts.ExtendedTiming = flags.msmopttiming1
+	httpopts.MoreExtendedTiming = flags.msmopttiming2
 	err := spec.AddHttp(descr, server, flags.msmaf, baseopts, &httpopts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
