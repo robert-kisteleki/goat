@@ -122,11 +122,13 @@ func commandMeasure(args []string) {
 	}
 
 	// most of the work is done by goatAPI
-	err := spec.Submit()
+	msmlist, err := spec.Submit()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
 	}
+
+	fmt.Println("Measurement ID:", msmlist[0])
 
 	/*
 		output.Setup(formatter, flagVerbose, flags.outopts)
