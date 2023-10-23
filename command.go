@@ -36,6 +36,8 @@ func commandSelector() {
 		commandResult(args[1:])
 	case args[0] == "status":
 		commandStatusCheck(args[1:])
+	case args[0] == "measure":
+		commandMeasure(args[1:])
 	default:
 		commandHelp()
 	}
@@ -61,6 +63,7 @@ func printUsage() {
 	fmt.Println("	fm|findmsm       search for measurements")
 	fmt.Println("	result           download results")
 	fmt.Println("	status           measurement status check")
+	fmt.Println("	measure          start new measurement(s)")
 	fmt.Println("")
 	fmt.Println("Options:")
 	flag.PrintDefaults()

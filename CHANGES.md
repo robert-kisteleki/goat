@@ -2,7 +2,11 @@
 
 ## next
 
-* NEW: add support for measurement status checks (status subcommand)
+* NEW: add support for measurement status checks (`status` subcommand)
+* NEW: add support for measurement scheduling (`measure` subcommand)
+  * support all measurement types with lots of options and sane defaults
+  * support all probe selection criteria
+  * support default probe selection specification in config file
 
 ## v0.3.0
 

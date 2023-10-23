@@ -79,7 +79,7 @@ func commandFindMsm(args []string) {
 
 	// counting only
 	if _, ok := options["count"]; ok {
-		count, err := filter.GetMeasurementCount(flagVerbose)
+		count, err := filter.GetMeasurementCount()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 			os.Exit(1)
@@ -90,7 +90,7 @@ func commandFindMsm(args []string) {
 
 	// most of the work is done by goatAPI
 	measurements := make(chan goatapi.AsyncMeasurementResult)
-	go filter.GetMeasurements(flagVerbose, measurements)
+	go filter.GetMeasurements(measurements)
 
 	// produce output; exact format depends on the "format" option
 	output.Setup(formatter, flagVerbose, []string(flags.outopts))
@@ -114,6 +114,7 @@ func parseFindMsmFlags(flags *findMsmFlags) (
 ) {
 	options = make(map[string]any)
 	filter = goatapi.NewMeasurementFilter()
+	filter.Verbose(flagVerbose)
 
 	// options
 

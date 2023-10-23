@@ -32,9 +32,17 @@ var (
 	flagsFindMsm     *flag.FlagSet
 	flagsGetResult   *flag.FlagSet
 	flagsStatusCheck *flag.FlagSet
+	flagsMeasure     *flag.FlagSet
 
 	apiKey  *uuid.UUID           // specified on the command line explicitly or via env
 	apiKeys map[string]uuid.UUID // collected from config file
+
+	probeSpecCc     string
+	probeSpecArea   string
+	probeSpecAsn    string
+	probeSpecPrefix string
+	probeSpecList   string
+	probeSpecReuse  string
 )
 
 const version = "v0.3.0+"
@@ -89,6 +97,7 @@ func configure() {
 	flagsFindMsm = flag.NewFlagSet("measurement", flag.ExitOnError)
 	flagsGetResult = flag.NewFlagSet("result", flag.ExitOnError)
 	flagsStatusCheck = flag.NewFlagSet("status", flag.ExitOnError)
+	flagsMeasure = flag.NewFlagSet("measure", flag.ExitOnError)
 
 	Subcommands = map[string]*flag.FlagSet{
 		flagsVersion.Name():     flagsVersion,
@@ -97,6 +106,7 @@ func configure() {
 		flagsFindMsm.Name():     flagsFindMsm,
 		flagsGetResult.Name():   flagsGetResult,
 		flagsStatusCheck.Name(): flagsStatusCheck,
+		flagsMeasure.Name():     flagsStatusCheck,
 	}
 	setupFlags()
 
@@ -134,6 +144,7 @@ func readConfig(confFile string) bool {
 
 	// record stuff that was in the config file
 	loadApiKey(cfg, "list_measurements")
+	loadApiKey(cfg, "create_measurements")
 	// TODO: add more API key variations here
 
 	// allow config to override where the API is
@@ -155,6 +166,14 @@ func readConfig(confFile string) bool {
 	}
 	// we deliberately ignore errors on creating this dir as it may exist
 	_ = os.MkdirAll(CacheDir, os.FileMode(0755))
+
+	// load probe specification defaults
+	probeSpecCc = cfg.Section("probespec").Key("probecc").MustString("")
+	probeSpecArea = cfg.Section("probespec").Key("probearea").MustString("")
+	probeSpecAsn = cfg.Section("probespec").Key("probeasn").MustString("")
+	probeSpecPrefix = cfg.Section("probespec").Key("probeprefix").MustString("")
+	probeSpecList = cfg.Section("probespec").Key("probelist").MustString("")
+	probeSpecReuse = cfg.Section("probespec").Key("probereuse").MustString("")
 
 	return true
 }
@@ -192,6 +211,18 @@ cachedir = ""
 
 # List your measurements
 list_measurements = ""
+
+# Create new measurement(s)
+create_measurements = ""
+
+# default probe specifications for new measurements
+[probespec]
+probecc = ""
+probearea = ""
+probeasn = ""
+probeprefix = ""
+probelist = ""
+probereuse = ""
 `)
 
 	if flagVerbose {
@@ -231,4 +262,23 @@ func getApiKey(function string) *uuid.UUID {
 	}
 
 	return nil
+}
+
+func getProbeSpecDefault(spec string) string {
+	switch spec {
+	case "cc":
+		return probeSpecCc
+	case "area":
+		return probeSpecArea
+	case "asn":
+		return probeSpecAsn
+	case "prefix":
+		return probeSpecPrefix
+	case "list":
+		return probeSpecList
+	case "reuse":
+		return probeSpecReuse
+	default:
+		return ""
+	}
 }

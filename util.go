@@ -33,13 +33,18 @@ func makeIntList(csv string) ([]uint, error) {
 // This function parses those into a time.Time
 // With ISO8601: SS, MM:SS and HH:MM:SS are optional and default to 0
 func parseTimeAlternatives(data string) (time.Time, error) {
-	if data == "today" {
+	switch data {
+	case "":
+		return time.Now(), fmt.Errorf("cannot parse date/time '%s'", data)
+	case "today":
 		now := time.Now().UTC().Unix()
 		return time.Unix(now-now%86400, 0), nil
-	}
-	if data == "yesterday" {
+	case "yesterday":
 		now := time.Now().UTC().Unix()
 		return time.Unix(now-now%86400-86400, 0), nil
+	case "tomorrow":
+		now := time.Now().UTC().Unix()
+		return time.Unix(now-now%86400+86400, 0), nil
 	}
 
 	// try parsing as UNIX epoch first
@@ -48,37 +53,13 @@ func parseTimeAlternatives(data string) (time.Time, error) {
 		return time.Unix(int64(epoch), 0), nil
 	}
 
-	var t time.Time
-	layout := "2006-01-02T15:04:05Z"
-	// try parsing variations of (shortened) ISO8601
-	// perhaps there's a nicer way of doing this
-	t, err = time.Parse(layout, data)
-	if err == nil {
-		return t, nil
+	// try various shortened versions of ISO8601
+	const format = "2006-01-02T15:04:05Z"
+	parseformat := format
+	if len(data) < len(format) {
+		parseformat = format[:len(data)]
 	}
-	t, err = time.Parse(layout, data+"Z")
-	if err == nil {
-		return t, nil
-	}
-	t, err = time.Parse(layout, data+":00Z")
-	if err == nil {
-		return t, nil
-	}
-	t, err = time.Parse(layout, data+":00:00Z")
-	if err == nil {
-		return t, nil
-	}
-	t, err = time.Parse(layout, data+"00:00:00Z")
-	if err == nil {
-		return t, nil
-	}
-	t, err = time.Parse(layout, data+"T00:00:00Z")
-	if err == nil {
-		return t, nil
-	}
-
-	// we failed. Return an error; the time value can be ignored
-	return time.Now().UTC(), fmt.Errorf("could not parse time: %s", data)
+	return time.Parse(parseformat, data)
 }
 
 type multioption []string

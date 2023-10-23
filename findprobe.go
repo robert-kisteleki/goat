@@ -73,7 +73,7 @@ func commandFindProbe(args []string) {
 
 	// counting only
 	if _, ok := options["count"]; ok {
-		count, err := filter.GetProbeCount(flagVerbose)
+		count, err := filter.GetProbeCount()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 			os.Exit(1)
@@ -84,7 +84,7 @@ func commandFindProbe(args []string) {
 
 	// most of the work is done by goatAPI
 	probes := make(chan goatapi.AsyncProbeResult)
-	go filter.GetProbes(flagVerbose, probes)
+	go filter.GetProbes(probes)
 
 	// produce output; exact format depends on the "format" option
 	output.Setup(formatter, flagVerbose, flags.outopts)
@@ -108,6 +108,7 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 ) {
 	options = make(map[string]any)
 	filter = goatapi.NewProbeFilter()
+	filter.Verbose(flagVerbose)
 
 	// options
 
