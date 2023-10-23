@@ -6,9 +6,10 @@ It supports:
 * finding probes
 * finding anchors
 * finding measurements
-* downloading and displaying results of measurements and turning them into Go objects
-* tuning in to result streaming and turning them into Go objects
-* loading a local file containing measurement results and turning them into Go objects
+* scheduling new measurements
+* downloading and displaying results of measurements
+* tuning in to result streaming
+* loading a local file containing measurement results
 * various kinds of output formatters for displaying and aggregating measurement results
 * (more features to come)
 
@@ -146,9 +147,96 @@ The output formatters are extensible, feel free to write your own -- and contrib
 
 New output processors need to be registered in `goatcli.go`. See `some.go` or `native.go` for examples.
 
+## Schedule a New Measurement
+
+Use the `measurement` subcommand. Quick examples:
+
+```sh
+# create a one-off with default set of probes
+$ ./goatcli measure --ping --target ping.ripe.net
+
+# create an ongoing with default set of probes and predefined start and stop times
+$ ./goatcli measure --ping --target ping.ripe.net --ongoing --start 2023-10-23T19 --stop tomorrow
+
+# create a one-off with 15 probes from AS33260
+$ ./goatcli measure --ping --target ping.ripe.net --probeasn 15@3320
+
+# create a one-off with 15 probes from AS33260 and 20 probes from NL
+$ ./goatcli measure --trace --target ping.ripe.net --probeasn 15@3320 --probecc 20@nl
+```
+
+### Authentication
+
+A valid API key for creating measurements is needed. It should be defined in the configuration file (`/.config/goat.ini`):
+
+```
+[apikeys]
+# Create new measurement(s)
+create_measurements = "12345678-xxxx-xxxx-xxxx-something"
+```
+
+It is also possible to supply a key on the command line (`--key KEY`).
+
+### Probe Selection
+
+The following probe selection options are available:
+* `--probearea` select from areas. A comma separated list of `amount@area` where `area` can be `ww`, `west`, `nc`, `sc`, `ne`, `se`
+* `--probeasn` select from ASNs. A comma separated list of `amount@ASN`
+* `--probecc` select from countries. A comma separated list of `amount@CC` where CC is a valid country code
+* `--probelist` provides an explicit list of probe IDs to include as a comma separated list.
+* `--probeprefix` select from prefixes (IPv4 or IPv6). A comma separated list of `amount@prefix`
+* `--probereuse` reuse probes from a precvious measurement. A comma separated list of `amount@msmID`
+
+Multiple probe selection criteria can be sepcified; each of them add more probes to the selection.
+
+`--probetaginc` and `--probetagexc` can be used to filter for probes that have been tagged (or not tagged) with those tags. Both are comma separated lists.
+
+A default probe selection can be expressed in the configuration file (`/.config/goat.ini`) using entries with the above names in the `[probespec]` section, e.g.:
+
+```
+# default probe specifications for new measurements
+[probespec]
+probecc = ""
+probearea = "9@ww"
+probeasn = ""
+probeprefix = ""
+probelist = ""
+probereuse = ""
+```
+
+### Timing
+
+By default one-offs are scheduled, starting as soon as possible. You can specify a start time (`start`) in the future and for ongoings perhaps even a stop time (`stop`). Times can be specifies as:
+* UNIX timestamps
+* ISO8601 variants:
+  * `YYYY-mm-ddTHH:MM:SS` - leaving time details from the right makes them default to 0 (e.g. `2023-10-24` is valid and becomes `2023-10-24T00:00:00`)
+
+### Measurement Types and Options
+
+You can define one measurement per invocation. This can be one of: `ping`, `trace`, `dns`, `tls`, `ntp` or `http` (the last one with restrictions by the system). Each measurement needs a `target`, except DNS that needs a `name` to look up and uses `target` as the server/resolver to use if it's specified, otherwise uses the local resolver.
+
+Common options for measurements include `interval`, `spread`, `tags` and some more.
+
+Each mesurement type accepts a number of options, such as `abuf`, `qbuf`, `nsid`, `rd` for DNS, `minhop` and `maxhop` for trace, etc. Check the help page for the complete list of these.
+
+### Output
+
+For now the measurement scheduling request returns either the ID of the new measurement or an error if something went wrong.
+
+
+## Status Checks
+
+Provide a short summary of the results for a [measurement status check](https://atlas.ripe.net/docs/apis/rest-api-manual/measurements/status-checks.html). It needs a measurement ID, and by default it summarises the results (is there an alert, how many probes are in that state out of how many total, and with the `most` output formatter the list of alerting probes).
+
+```sh
+$ ./goatcli status -id 61953517 -output most
+true	1	9	[1005382]
+```
+
+
 # Future Additions / TODO
 
-* schedule a new measurement, stop existing measurements
+* stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
 * check credit balance, transfer credits, ...
 
