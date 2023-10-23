@@ -75,6 +75,7 @@ type measureFlags struct {
 	msmoptclass    string // DNS: class (IN, CHAOS)
 	msmopttype     string // DNS: type (A, AAAA, NS, CNAME, ...)
 	msmoptport     uint   // TLS, HTTP: port number
+	msmoptsni      string // TLS: SNI
 	msmoptversion  string // HTTP: version (1.0, 1.1)
 	msmopttiming1  bool   // HTTP: extended timing
 	msmopttiming2  bool   // HTTP: more extended timing
@@ -286,6 +287,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.StringVar(&flags.msmopttype, "type", "A", "DNS: query type (A, AAAA, NS, CNAME, ...)")
 	flagsMeasure.StringVar(&flags.msmoptmethod, "method", "HEAD", "HTTP: method to use (HEAD, GET, POST)")
 	flagsMeasure.UintVar(&flags.msmoptport, "port", 0, "TLS: port number")
+	flagsMeasure.StringVar(&flags.msmoptsni, "sni", "", "TLS: SNI to use. Defaults to target name")
 	flagsMeasure.StringVar(&flags.msmoptversion, "version", "1.0", "HTTP: version to use (1.0, 1.1)")
 	flagsMeasure.BoolVar(&flags.msmopttiming1, "time1", false, "HTTP: extended timing")
 	flagsMeasure.BoolVar(&flags.msmopttiming2, "time2", false, "HTTP: more extended timing")
@@ -618,6 +620,11 @@ func parseMeasurementTls(
 	tlsopts := goatapi.TlsOptions{}
 	if flags.msmoptport != 0 {
 		tlsopts.Port = flags.msmoptport
+	}
+	if flags.msmoptsni == "" {
+		tlsopts.Sni = flags.msmtarget
+	} else {
+		tlsopts.Sni = flags.msmoptsni
 	}
 	err := spec.AddTls(descr, flags.msmtarget, flags.msmaf, baseopts, &tlsopts)
 	if err != nil {
