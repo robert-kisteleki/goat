@@ -1,6 +1,6 @@
 # goatCLI changelog
 
-## next
+## v0.4.0
 
 * NEW: add support for measurement status checks (`status` subcommand)
 * NEW: add support for measurement scheduling (`measure` subcommand)
