@@ -24,6 +24,9 @@ type measureFlags struct {
 	specOnly bool
 	output   string
 	outopts  multioption
+	save     string
+	result   bool
+	noresult bool
 
 	// probe options
 	probetaginc string
@@ -36,9 +39,9 @@ type measureFlags struct {
 	probereuse  string
 
 	// timing options
-	ongoing bool
-	start   string
-	stop    string
+	periodic bool
+	start    string
+	stop     string
 
 	// common measurement options
 	msmdescr          string
@@ -129,21 +132,28 @@ func commandMeasure(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Measurement ID:", msmlist[0])
+	if flagVerbose {
+		fmt.Println("# Measurement ID:", msmlist[0])
+	} else if !flags.result {
+		fmt.Println(msmlist[0])
+	}
 
-	/*
-		output.Setup(formatter, flagVerbose, flags.outopts)
-		output.Start(formatter)
-		for status := range statuses {
-			if status.Error != nil {
-				fmt.Fprintf(os.Stderr, "ERROR: %v\n", status.Error)
-				os.Exit(1)
-			} else {
-				output.Process(formatter, status)
-			}
+	// the measurement is ready - tune into the result stream if the user wanted that
+	if flags.result {
+		// prepare
+		rflags := resultFlags{
+			stream:       true,
+			filterID:     msmlist[0],
+			saveFileName: flags.save,
+			saveAll:      true,
+			output:       flags.output,
+			outopts:      flags.outopts,
+			limit:        0, // FIXME: limit should be total_probes_wanted for one-offs
 		}
-		output.Finish(formatter)
-	*/
+
+		// most of the work is done by the implementation of the result streaming feature
+		commandResultFromFlags(&rflags)
+	}
 }
 
 // Process flags (options), pass most of them on to goatAPI
@@ -214,8 +224,8 @@ func processMeasureFlags(flags *measureFlags) (
 	parseProbeListSpec(flags.probelist, spec, &probetaginc, &probetagexc)
 
 	// process timing
-	spec.OneOff(!flags.ongoing)
-	parseStartStop(spec, !flags.ongoing, flags.start, flags.stop)
+	spec.OneOff(!flags.periodic)
+	parseStartStop(spec, !flags.periodic, flags.start, flags.stop)
 
 	// process measurement specification
 	parseMeasurementPing(flags, spec)
@@ -237,6 +247,8 @@ func parseMeasureArgs(args []string) *measureFlags {
 
 	// generic flags
 	flagsMeasure.BoolVar(&flags.specOnly, "json", false, "Output the specification only, don't schedule the measurement")
+	flagsMeasure.BoolVar(&flags.result, "result", false, "Immediately tune in to the result stream. By default true for one-offs, false for periodic ones.")
+	flagsMeasure.BoolVar(&flags.noresult, "noresult", false, "Don't tune in to the result stream, even for a one-off.")
 
 	// probe selection
 	flagsMeasure.StringVar(&flags.probetaginc, "probetaginc", "", "Probe tags to include (comma separated list)")
@@ -249,7 +261,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.StringVar(&flags.probereuse, "probereuse", "", "Probes to reuse from a previous measurement as amount@msmID")
 
 	// timing
-	flagsMeasure.BoolVar(&flags.ongoing, "ongoing", false, "Schedule an ongoing measurement instead of a one-off")
+	flagsMeasure.BoolVar(&flags.periodic, "periodic", false, "Schedule a periodic measurement instead of a one-off")
 	flagsMeasure.StringVar(&flags.start, "start", "", "When to start this measurement")
 	flagsMeasure.StringVar(&flags.stop, "stop", "", "When to stop this measurement (if it's ongoing)")
 
@@ -295,6 +307,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	// options
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
 	flagsMeasure.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
+	flagsMeasure.StringVar(&flags.save, "save", "", "Save results to this file")
 
 	flagsMeasure.Parse(args)
 
@@ -303,6 +316,20 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flags.msmopttype = strings.ToUpper(flags.msmopttype)
 	flags.msmoptmethod = strings.ToUpper(flags.msmoptmethod)
 	flags.msmoptprotocol = strings.ToUpper(flags.msmoptprotocol)
+
+	// one cannot have and not have results at the same time
+	if flags.result && flags.noresult {
+		fmt.Fprintf(os.Stderr, "ERROR: please decide if you want result streaming or not\n")
+		os.Exit(1)
+	}
+	// for one-offs turn on result streaming unless it's explicity not wanted
+	if !flags.periodic && !flags.noresult {
+		flags.result = true
+	}
+	// for periodics only turn result streaming if it's explicitly wanted
+	if flags.periodic && flags.result {
+		flags.result = true
+	}
 
 	return &flags
 }

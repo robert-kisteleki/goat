@@ -36,10 +36,15 @@ type resultFlags struct {
 	limit        uint
 }
 
-// Implementation of the "result" subcommand. Parses command line flags
-// and interacts with goatAPI to apply those filters+options to fetch results
+// Implementation stub of the "result" subcommand, starting from command line args
 func commandResult(args []string) {
 	flags := parseResultArgs(args)
+	commandResultFromFlags(flags)
+}
+
+// Actual implementation of the "result" subcommand. Based on flags it
+// interacts with goatAPI to apply those filters+options to fetch results
+func commandResultFromFlags(flags *resultFlags) {
 	filter, options := processResultFlags(flags)
 
 	formatter := options["output"].(string)
