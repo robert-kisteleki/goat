@@ -103,7 +103,7 @@ func process(res any) {
 			}
 
 			// count how many of these we had
-			registerResult(key, dns.AddressFamily, dns.ProbeID)
+			registerResult(key, resp.AddressFamily, dns.ProbeID)
 		}
 	}
 }
