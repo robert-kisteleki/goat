@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"goatcli/output"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/robert-kisteleki/goatapi"
@@ -84,7 +85,11 @@ func commandResultFromFlags(flags *resultFlags) {
 	output.Start(formatter)
 	for result := range results {
 		if result.Error != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: %s\n", result.Error)
+			if strings.Contains(result.Error.Error(), "EOF") {
+				fmt.Fprintf(os.Stderr, "EOF\n")
+			} else {
+				fmt.Fprintf(os.Stderr, "ERROR: %s\n", result.Error)
+			}
 		} else {
 			output.Process(formatter, result.Result)
 		}
