@@ -1,5 +1,10 @@
 # goatCLI changelog
 
+## next
+
+* NEW: measurement scheduling now immediately tunes in to show results for one-offs
+* CHANGED: renamed the `--ongoing` flag to `--periodic` for measurement scheduling
+
 ## v0.4.0
 
 * NEW: add support for measurement status checks (`status` subcommand)
