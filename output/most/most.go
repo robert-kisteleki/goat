@@ -105,30 +105,8 @@ func mostOutputDnsResponse(resp *result.DnsResponse) string {
 		resp.NameServerCount,
 		resp.AdditionalCount,
 	)
-	ret += mostOutputDnsResponseDetail(resp)
+	ret += "\t" + output.OutputDnsResponseDetail(resp)
 	return ret
-}
-
-func mostOutputDnsAnswer(detail *result.DnsAnswer) string {
-	cl := result.DnsClassNames[detail.Class]
-	if cl == "" {
-		// yet unmapped class entries are represented as (Cxx)
-		cl = fmt.Sprintf("(C%d)", detail.Class)
-	}
-	ty := result.DnsTypeNames[detail.Type]
-	if ty == "" {
-		// yet unmapped type entries are represented as (Txx)
-		cl = fmt.Sprintf("(T%d)", detail.Type)
-	}
-	return fmt.Sprintf("%s %s %s '%s'", cl, ty, detail.Name, detail.Data)
-}
-
-func mostOutputDnsResponseDetail(resp *result.DnsResponse) string {
-	s := make([]string, 0)
-	for _, detail := range resp.AllAnswers() {
-		s = append(s, mostOutputDnsAnswer(&detail))
-	}
-	return "\t[" + strings.Join(s, " ") + "]"
 }
 
 func mostOutputTraceroute(res *result.TracerouteResult) string {

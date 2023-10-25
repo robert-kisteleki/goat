@@ -15,7 +15,6 @@ import (
 	"goatcli/output"
 	"goatcli/output/annotate"
 	"sort"
-	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
 	"golang.org/x/exp/slices"
@@ -89,17 +88,7 @@ func process(res any) {
 			case len(resp.Error) > 0: // collect TIMEOUTs separetely
 				key = "TIMEOUT"
 			default: // for the rest: extract "useful data"
-				set := make([]string, 0)
-				for _, ans := range resp.Answer {
-					s := strings.Split(ans.Data, "\t")
-					var r string
-					if len(s) > 4 {
-						r = strings.ReplaceAll(s[4], "'", "")
-					}
-					set = append(set, r)
-				}
-				slices.Sort(set)
-				key = strings.Join(set, " ")
+				key = output.OutputDnsResponseDetail(&resp)
 			}
 
 			// count how many of these we had
