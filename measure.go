@@ -82,6 +82,8 @@ type measureFlags struct {
 	msmoptversion  string // HTTP: version (1.0, 1.1)
 	msmopttiming1  bool   // HTTP: extended timing
 	msmopttiming2  bool   // HTTP: more extended timing
+
+	totalProbes int // how many probes were asked for
 }
 
 var dnstypes = []string{
@@ -148,7 +150,10 @@ func commandMeasure(args []string) {
 			saveAll:      true,
 			output:       flags.output,
 			outopts:      flags.outopts,
-			limit:        0, // FIXME: limit should be total_probes_wanted for one-offs
+			limit:        0,
+		}
+		if !flags.periodic {
+			rflags.limit = uint(flags.totalProbes)
 		}
 
 		// most of the work is done by the implementation of the result streaming feature
@@ -211,17 +216,17 @@ func processMeasureFlags(flags *measureFlags) (
 			flags.probeprefix == "" &&
 			flags.probereuse == "" &&
 			flags.probelist == "" {
-			parseProbeSpec("area", "10@ww", spec, &probetaginc, &probetagexc)
+			parseProbeSpec("area", "10@ww", spec, &probetaginc, &probetagexc, &flags.totalProbes)
 		}
 	}
 
 	// parse probe specifications
-	parseProbeSpec("cc", flags.probecc, spec, &probetaginc, &probetagexc)
-	parseProbeSpec("area", flags.probearea, spec, &probetaginc, &probetagexc)
-	parseProbeSpec("asn", flags.probeasn, spec, &probetaginc, &probetagexc)
-	parseProbeSpec("prefix", flags.probeprefix, spec, &probetaginc, &probetagexc)
-	parseProbeSpec("reuse", flags.probereuse, spec, &probetaginc, &probetagexc)
-	parseProbeListSpec(flags.probelist, spec, &probetaginc, &probetagexc)
+	parseProbeSpec("cc", flags.probecc, spec, &probetaginc, &probetagexc, &flags.totalProbes)
+	parseProbeSpec("area", flags.probearea, spec, &probetaginc, &probetagexc, &flags.totalProbes)
+	parseProbeSpec("asn", flags.probeasn, spec, &probetaginc, &probetagexc, &flags.totalProbes)
+	parseProbeSpec("prefix", flags.probeprefix, spec, &probetaginc, &probetagexc, &flags.totalProbes)
+	parseProbeSpec("reuse", flags.probereuse, spec, &probetaginc, &probetagexc, &flags.totalProbes)
+	parseProbeListSpec(flags.probelist, spec, &probetaginc, &probetagexc, &flags.totalProbes)
 
 	// process timing
 	spec.OneOff(!flags.periodic)
@@ -340,6 +345,7 @@ func parseProbeSpec(
 	from string,
 	spec *goatapi.MeasurementSpec,
 	probetaginc, probetagexc *[]string,
+	totalProbes *int,
 ) {
 	if from == "" {
 		return
@@ -407,6 +413,7 @@ func parseProbeSpec(
 			}
 			spec.AddProbesAreaWithTags(area, n, probetaginc, probetagexc)
 		}
+		*totalProbes += n
 	}
 }
 
@@ -415,6 +422,7 @@ func parseProbeListSpec(
 	from string,
 	spec *goatapi.MeasurementSpec,
 	probetaginc, probetagexc *[]string,
+	totalProbes *int,
 ) {
 	if from == "" {
 		return
@@ -431,6 +439,7 @@ func parseProbeListSpec(
 		list = append(list, uint(n))
 	}
 	spec.AddProbesListWithTags(list, probetaginc, probetagexc)
+	*totalProbes += len(list)
 }
 
 func parseStartStop(

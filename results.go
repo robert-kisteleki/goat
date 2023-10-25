@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"goatcli/output"
 	"os"
+	"time"
 
 	"github.com/robert-kisteleki/goatapi"
 	"github.com/robert-kisteleki/goatapi/result"
@@ -63,6 +64,17 @@ func commandResultFromFlags(flags *resultFlags) {
 		defer flags.saveFile.Close()
 	}
 
+	if flagVerbose && flags.stream {
+		limits := ""
+		if flags.limit != 0 {
+			limits = fmt.Sprintf("%d ", flags.limit)
+		}
+		fmt.Printf("# Listening on the stream for %sresults, starting at %v\n",
+			limits,
+			time.Now().UTC(),
+		)
+	}
+
 	// most of the work is done by goatAPI
 	// we receive results as they come in, via a channel
 	results := make(chan result.AsyncResult)
@@ -78,6 +90,10 @@ func commandResultFromFlags(flags *resultFlags) {
 		}
 	}
 	output.Finish(formatter)
+
+	if flagVerbose && flags.stream {
+		fmt.Printf("# Done listening to the stream at %v\n", time.Now().UTC())
+	}
 }
 
 // Process flags (filters & options), pass most of them on to goatAPI
