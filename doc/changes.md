@@ -2,7 +2,7 @@
 
 ## next
 
-* NEW: measurement scheduling now immediately tunes in to show results for one-offs
+* NEW: measurement scheduling now immediately tunes in to the result stream to show results for one-offs
 * CHANGED: renamed the `--ongoing` flag to `--periodic` for measurement scheduling
 
 ## v0.4.0

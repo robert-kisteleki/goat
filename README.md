@@ -26,7 +26,7 @@ be run by any user.
 
 # Quick Start
 
-Check the [Quick Start Guide](QUICKSTART.md) 
+Check the [Quick Start Guide](doc/QUICKSTART.md)
 
 # Future Additions / TODO
 

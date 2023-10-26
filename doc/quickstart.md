@@ -113,14 +113,6 @@ Loading data from a local file is simple as well (from a file with one result pe
 $ cat some-results.jsonl | ./goatcli result
 ```
 
-The output formatters are extensible, feel free to write your own -- and contribute that back to this repo! You only need to make a new package under `output` that implements four functions:
-* `setup()` to initialise the output processor
-* `start()` to prepare for processing results; may be called once per batch of results
-* `process()` to deal with one incoming result
-* `finish()` to finish processing, make a summary, etc.; may be called once per batch of results
-
-New output processors need to be registered in `goatcli.go`. See `some.go` or `native.go` for examples.
-
 ## Schedule a New Measurement
 
 Use the `measurement` subcommand. Quick examples:
@@ -209,3 +201,13 @@ Provide a short summary of the results for a [measurement status check](https://
 $ ./goatcli status -id 61953517 -output most
 true	1	9	[1005382]
 ```
+
+## Output Formatters
+
+The output formatters are extensible, feel free to write your own -- and contribute that back to this repo! You only need to make a new package under `output` that implements four functions:
+* `setup()` to initialise the output processor
+* `start()` to prepare for processing results; may be called once per batch of results
+* `process()` to deal with one incoming result
+* `finish()` to finish processing, make a summary, etc.; may be called once per batch of results
+
+New output processors need to be registered in `goatcli.go`. See `some.go` or `native.go` for examples.
