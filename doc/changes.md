@@ -1,9 +1,10 @@
 # goatCLI changelog
 
-## next
+## v0.4.1
 
 * NEW: measurement scheduling now immediately tunes in to the result stream to show results for one-offs
 * CHANGED: renamed the `--ongoing` flag to `--periodic` for measurement scheduling
+* CHANGED: various enhancements to output formats and accommodate goatapi result changes
 
 ## v0.4.0
 
