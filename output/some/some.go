@@ -107,7 +107,10 @@ func SomeOutputCert(res *result.CertResult) string {
 	if res.Alert != nil {
 		ret += fmt.Sprintf("\tALERT: %d %d", res.Alert.Level, res.Alert.Description)
 	}
-	if res.Alert == nil || res.Alert.Level == result.AlertLevelWarning {
+	switch {
+	case res.DnsError != "":
+		ret += "\tDNSERR: " + res.DnsError
+	case res.Alert == nil || res.Alert.Level == result.AlertLevelWarning:
 		ret += fmt.Sprintf("\t%s\t%s\t%f\t%d",
 			res.Method,
 			res.ProtocolVersion,
