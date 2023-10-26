@@ -82,10 +82,6 @@ func finish() {
 func mostOutputPing(res *result.PingResult) string {
 	return some.SomeOutputPing(res) +
 		fmt.Sprintf("\t%s", annotate.GetProbeCountry(res.ProbeID)) +
-		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f/%f",
-			res.Sent, res.Received, res.Duplicates,
-			res.Minimum, res.Average, res.Median, res.Maximum,
-		) +
 		fmt.Sprintf("\t%s\t%v", res.Protocol, res.ReplyRtts())
 }
 
@@ -118,6 +114,8 @@ func mostOutputCert(res *result.CertResult) string {
 	ret := some.SomeOutputCert(res)
 	if res.Alert == nil && res.Error == nil {
 		ret += fmt.Sprintf("\t%s", res.ServerCipher)
+	} else {
+		ret += "\tN/A"
 	}
 	certs := make([]string, 0)
 	for _, cert := range res.Certificates {
