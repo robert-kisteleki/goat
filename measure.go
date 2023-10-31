@@ -38,10 +38,13 @@ type measureFlags struct {
 	probelist   string
 	probereuse  string
 
+	// stop a measurement
+	msmstop uint
+
 	// timing options
-	periodic bool
-	start    string
-	stop     string
+	periodic  bool
+	starttime string
+	stoptime  string
 
 	// common measurement options
 	msmdescr          string
@@ -100,6 +103,17 @@ var httpversions = []string{"1.0", "1.1"}
 func commandMeasure(args []string) {
 	flags := parseMeasureArgs(args)
 	spec, options := processMeasureFlags(flags)
+
+	if flags.msmstop != 0 {
+		err := spec.Stop(flags.msmstop)
+		if err == nil {
+			fmt.Printf("Measurement %d has been stopped.", flags.msmstop)
+		} else {
+			fmt.Fprintf(os.Stderr, "ERROR while trying to stop measurement %d: %v\n", flags.msmstop, err)
+			os.Exit(1)
+		}
+	}
+
 	formatter := options["output"].(string)
 
 	if flags.msmaf != 4 && flags.msmaf != 6 {
@@ -230,7 +244,7 @@ func processMeasureFlags(flags *measureFlags) (
 
 	// process timing
 	spec.OneOff(!flags.periodic)
-	parseStartStop(spec, !flags.periodic, flags.start, flags.stop)
+	parseStartStop(spec, !flags.periodic, flags.starttime, flags.stoptime)
 
 	// process measurement specification
 	parseMeasurementPing(flags, spec)
@@ -250,6 +264,9 @@ func processMeasureFlags(flags *measureFlags) (
 func parseMeasureArgs(args []string) *measureFlags {
 	var flags measureFlags
 
+	// special case: stop a meeasurement
+	flagsMeasure.UintVar(&flags.msmstop, "stop", 0, "Stop a particular measurement")
+
 	// generic flags
 	flagsMeasure.BoolVar(&flags.specOnly, "json", false, "Output the specification only, don't schedule the measurement")
 	flagsMeasure.BoolVar(&flags.result, "result", false, "Immediately tune in to the result stream. By default true for one-offs, false for periodic ones.")
@@ -267,8 +284,8 @@ func parseMeasureArgs(args []string) *measureFlags {
 
 	// timing
 	flagsMeasure.BoolVar(&flags.periodic, "periodic", false, "Schedule a periodic measurement instead of a one-off")
-	flagsMeasure.StringVar(&flags.start, "start", "", "When to start this measurement")
-	flagsMeasure.StringVar(&flags.stop, "stop", "", "When to stop this measurement (if it's ongoing)")
+	flagsMeasure.StringVar(&flags.starttime, "start", "", "When to start this measurement")
+	flagsMeasure.StringVar(&flags.stoptime, "stop", "", "When to stop this measurement (if it's ongoing)")
 
 	// measurement types
 	flagsMeasure.BoolVar(&flags.msmping, "ping", false, "Schedule a ping measurement")
@@ -469,10 +486,10 @@ func parseStartStop(
 	}
 
 	if starterr == nil {
-		spec.Start(starttime)
+		spec.StartTime(starttime)
 	}
 	if stoperr == nil {
-		spec.Stop(stoptime)
+		spec.StopTime(stoptime)
 	}
 }
 
