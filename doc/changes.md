@@ -1,5 +1,10 @@
 # goatCLI changelog
 
+## next
+
+* CHANGED: renamed `--stop` to `--end` to indicate preferred end time of periodic measurements
+* NEW: add support to stop existing measurements
+
 ## v0.4.1
 
 * NEW: measurement scheduling now immediately tunes in to the result stream to show results for one-offs

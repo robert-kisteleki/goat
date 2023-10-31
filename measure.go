@@ -99,19 +99,27 @@ var httpmethods = []string{"HEAD", "GET", "POST"}
 var httpversions = []string{"1.0", "1.1"}
 
 // Implementation of the "measure" subcommand. Parses command line flags
-// and interacts with goatAPI to initiate new measurements
+// and interacts with goatAPI to initiate new measurements or stop existing ones
 func commandMeasure(args []string) {
 	flags := parseMeasureArgs(args)
 	spec, options := processMeasureFlags(flags)
 
 	if flags.msmstop != 0 {
+		if getApiKey("stop_measurements") == nil {
+			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key stop_measurements - please consult the config file\n")
+			os.Exit(1)
+		}
+		spec.ApiKey(getApiKey("stop_measurements"))
+
 		err := spec.Stop(flags.msmstop)
 		if err == nil {
-			fmt.Printf("Measurement %d has been stopped.", flags.msmstop)
+			fmt.Printf("Measurement %d has been stopped.\n", flags.msmstop)
 		} else {
 			fmt.Fprintf(os.Stderr, "ERROR while trying to stop measurement %d: %v\n", flags.msmstop, err)
 			os.Exit(1)
 		}
+
+		return
 	}
 
 	formatter := options["output"].(string)
@@ -137,9 +145,10 @@ func commandMeasure(args []string) {
 	}
 
 	if getApiKey("create_measurements") == nil {
-		fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key create_measurement - please consult the config file\n")
+		fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key create_measurements - please consult the config file\n")
 		os.Exit(1)
 	}
+	spec.ApiKey(getApiKey("create_measurements"))
 
 	// most of the work is done by goatAPI
 	msmlist, err := spec.Submit()
@@ -184,8 +193,6 @@ func processMeasureFlags(flags *measureFlags) (
 	options = make(map[string]any)
 	spec = goatapi.NewMeasurementSpec()
 	spec.Verbose(flagVerbose)
-
-	spec.ApiKey(getApiKey("create_measurements"))
 
 	// process probe sepcification(s)
 	var probetaginc, probetagexc []string
@@ -285,7 +292,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	// timing
 	flagsMeasure.BoolVar(&flags.periodic, "periodic", false, "Schedule a periodic measurement instead of a one-off")
 	flagsMeasure.StringVar(&flags.starttime, "start", "", "When to start this measurement")
-	flagsMeasure.StringVar(&flags.stoptime, "stop", "", "When to stop this measurement (if it's ongoing)")
+	flagsMeasure.StringVar(&flags.stoptime, "end", "", "When to stop this measurement (if it's ongoing)")
 
 	// measurement types
 	flagsMeasure.BoolVar(&flags.msmping, "ping", false, "Schedule a ping measurement")

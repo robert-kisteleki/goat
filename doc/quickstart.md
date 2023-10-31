@@ -121,8 +121,8 @@ Use the `measurement` subcommand. Quick examples:
 # create a one-off with default set of probes
 $ ./goatcli measure --ping --target ping.ripe.net
 
-# create an periodic measurement with default set of probes and predefined start and stop times
-$ ./goatcli measure --ping --target ping.ripe.net --periodic --start 2023-10-23T19 --stop tomorrow
+# create an periodic measurement with default set of probes and predefined start and end times
+$ ./goatcli measure --ping --target ping.ripe.net --periodic --start 2023-10-23T19 --end tomorrow
 
 # create a one-off with 15 probes from AS33260
 $ ./goatcli measure --ping --target ping.ripe.net --probeasn 15@3320
@@ -172,7 +172,7 @@ probereuse = ""
 
 ### Timing
 
-By default one-offs are scheduled, starting as soon as possible. You can specify a start time (`start`) in the future and for periodic meaasurements perhaps even a stop time (`stop`). Times can be specifies as:
+By default one-offs are scheduled, starting as soon as possible. You can specify a start time (`start`) in the future and for periodic meaasurements perhaps even an end time (`end`). Times can be specifies as:
 * UNIX timestamps
 * ISO8601 variants:
   * `YYYY-mm-ddTHH:MM:SS` - leaving time details from the right makes them default to 0 (e.g. `2023-10-24` is valid and becomes `2023-10-24T00:00:00`)
@@ -192,6 +192,10 @@ Each mesurement type accepts a number of options, such as `abuf`, `qbuf`, `nsid`
 If the measurement scheduling request was successful and results are not requested immediately, the ID of the new measurement is displayed.
 
 If results are requested to be shown immediately (e.g. the result stream is used) -- which is the defaut for one-off measurements -- then those results will be displayed as they become available. The `--output` and `--opt` flags can be used to control the output format. Also, `--save <FILENAME>` can be used to store incoming results in a file as well.
+
+## Stop a Periodic Measurement
+
+Use the `measurement` subcommand with the `--stop ID` flag. The required key can be added to the config file as `stop_measurements`.
 
 ## Status Checks
 
