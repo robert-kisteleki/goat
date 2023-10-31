@@ -38,10 +38,13 @@ type measureFlags struct {
 	probelist   string
 	probereuse  string
 
+	// stop a measurement
+	msmstop uint
+
 	// timing options
-	periodic bool
-	start    string
-	stop     string
+	periodic  bool
+	starttime string
+	endtime   string
 
 	// common measurement options
 	msmdescr          string
@@ -96,10 +99,29 @@ var httpmethods = []string{"HEAD", "GET", "POST"}
 var httpversions = []string{"1.0", "1.1"}
 
 // Implementation of the "measure" subcommand. Parses command line flags
-// and interacts with goatAPI to initiate new measurements
+// and interacts with goatAPI to initiate new measurements or stop existing ones
 func commandMeasure(args []string) {
 	flags := parseMeasureArgs(args)
 	spec, options := processMeasureFlags(flags)
+
+	if flags.msmstop != 0 {
+		if getApiKey("stop_measurements") == nil {
+			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key stop_measurements - please consult the config file\n")
+			os.Exit(1)
+		}
+		spec.ApiKey(getApiKey("stop_measurements"))
+
+		err := spec.Stop(flags.msmstop)
+		if err == nil {
+			fmt.Printf("Measurement %d has been stopped.\n", flags.msmstop)
+		} else {
+			fmt.Fprintf(os.Stderr, "ERROR while trying to stop measurement %d: %v\n", flags.msmstop, err)
+			os.Exit(1)
+		}
+
+		return
+	}
+
 	formatter := options["output"].(string)
 
 	if flags.msmaf != 4 && flags.msmaf != 6 {
@@ -123,12 +145,13 @@ func commandMeasure(args []string) {
 	}
 
 	if getApiKey("create_measurements") == nil {
-		fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key create_measurement - please consult the config file\n")
+		fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key create_measurements - please consult the config file\n")
 		os.Exit(1)
 	}
+	spec.ApiKey(getApiKey("create_measurements"))
 
 	// most of the work is done by goatAPI
-	msmlist, err := spec.Submit()
+	msmlist, err := spec.Schedule()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
@@ -170,8 +193,6 @@ func processMeasureFlags(flags *measureFlags) (
 	options = make(map[string]any)
 	spec = goatapi.NewMeasurementSpec()
 	spec.Verbose(flagVerbose)
-
-	spec.ApiKey(getApiKey("create_measurements"))
 
 	// process probe sepcification(s)
 	var probetaginc, probetagexc []string
@@ -230,7 +251,7 @@ func processMeasureFlags(flags *measureFlags) (
 
 	// process timing
 	spec.OneOff(!flags.periodic)
-	parseStartStop(spec, !flags.periodic, flags.start, flags.stop)
+	parseStartStop(spec, !flags.periodic, flags.starttime, flags.endtime)
 
 	// process measurement specification
 	parseMeasurementPing(flags, spec)
@@ -250,6 +271,9 @@ func processMeasureFlags(flags *measureFlags) (
 func parseMeasureArgs(args []string) *measureFlags {
 	var flags measureFlags
 
+	// special case: stop a meeasurement
+	flagsMeasure.UintVar(&flags.msmstop, "stop", 0, "Stop a particular measurement")
+
 	// generic flags
 	flagsMeasure.BoolVar(&flags.specOnly, "json", false, "Output the specification only, don't schedule the measurement")
 	flagsMeasure.BoolVar(&flags.result, "result", false, "Immediately tune in to the result stream. By default true for one-offs, false for periodic ones.")
@@ -267,8 +291,8 @@ func parseMeasureArgs(args []string) *measureFlags {
 
 	// timing
 	flagsMeasure.BoolVar(&flags.periodic, "periodic", false, "Schedule a periodic measurement instead of a one-off")
-	flagsMeasure.StringVar(&flags.start, "start", "", "When to start this measurement")
-	flagsMeasure.StringVar(&flags.stop, "stop", "", "When to stop this measurement (if it's ongoing)")
+	flagsMeasure.StringVar(&flags.starttime, "start", "", "When to start this measurement")
+	flagsMeasure.StringVar(&flags.endtime, "end", "", "When to end this measurement (if it's ongoing)")
 
 	// measurement types
 	flagsMeasure.BoolVar(&flags.msmping, "ping", false, "Schedule a ping measurement")
@@ -446,12 +470,12 @@ func parseStartStop(
 	spec *goatapi.MeasurementSpec,
 	oneoff bool,
 	start string,
-	stop string,
+	end string,
 ) {
 	starttime, starterr := parseTimeAlternatives(start)
-	stoptime, stoperr := parseTimeAlternatives(stop)
+	endtime, enderr := parseTimeAlternatives(end)
 
-	if oneoff && stoperr == nil {
+	if oneoff && enderr == nil {
 		fmt.Fprintf(os.Stderr, "ERROR: one-offs cannot have a stop time\n")
 		os.Exit(1)
 	}
@@ -459,20 +483,20 @@ func parseStartStop(
 		fmt.Fprintf(os.Stderr, "ERROR: start time cannot be in the past\n")
 		os.Exit(1)
 	}
-	if stoperr == nil && stoptime.Unix() <= time.Now().Unix() {
+	if enderr == nil && endtime.Unix() <= time.Now().Unix() {
 		fmt.Fprintf(os.Stderr, "ERROR: stop time cannot be in the past\n")
 		os.Exit(1)
 	}
-	if starterr == nil && stoperr == nil && starttime.Unix() >= stoptime.Unix() {
+	if starterr == nil && enderr == nil && starttime.Unix() >= endtime.Unix() {
 		fmt.Fprintf(os.Stderr, "ERROR: start time has to be before stop time\n")
 		os.Exit(1)
 	}
 
 	if starterr == nil {
-		spec.Start(starttime)
+		spec.StartTime(starttime)
 	}
-	if stoperr == nil {
-		spec.Stop(stoptime)
+	if enderr == nil {
+		spec.EndTime(endtime)
 	}
 }
 

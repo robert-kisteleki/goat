@@ -7,11 +7,11 @@ It supports:
 * finding anchors
 * finding measurements
 * scheduling new measurements and immediately show its results
+* stopping existing measurements
 * downloading and displaying results of measurements
 * tuning in to result streaming
 * loading a local file containing measurement results
 * various kinds of output formatters for displaying and aggregating measurement results
-* (more features to come)
 
 The tool needs Go 1.18 to compile.
 
@@ -30,7 +30,6 @@ Check the [Quick Start Guide](doc/quickstart.md)
 
 # Future Additions / TODO
 
-* stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
 * check credit balance, transfer credits, ...
 
