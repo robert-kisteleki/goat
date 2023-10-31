@@ -44,7 +44,7 @@ type measureFlags struct {
 	// timing options
 	periodic  bool
 	starttime string
-	stoptime  string
+	endtime   string
 
 	// common measurement options
 	msmdescr          string
@@ -151,7 +151,7 @@ func commandMeasure(args []string) {
 	spec.ApiKey(getApiKey("create_measurements"))
 
 	// most of the work is done by goatAPI
-	msmlist, err := spec.Submit()
+	msmlist, err := spec.Schedule()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
@@ -251,7 +251,7 @@ func processMeasureFlags(flags *measureFlags) (
 
 	// process timing
 	spec.OneOff(!flags.periodic)
-	parseStartStop(spec, !flags.periodic, flags.starttime, flags.stoptime)
+	parseStartStop(spec, !flags.periodic, flags.starttime, flags.endtime)
 
 	// process measurement specification
 	parseMeasurementPing(flags, spec)
@@ -292,7 +292,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	// timing
 	flagsMeasure.BoolVar(&flags.periodic, "periodic", false, "Schedule a periodic measurement instead of a one-off")
 	flagsMeasure.StringVar(&flags.starttime, "start", "", "When to start this measurement")
-	flagsMeasure.StringVar(&flags.stoptime, "end", "", "When to stop this measurement (if it's ongoing)")
+	flagsMeasure.StringVar(&flags.endtime, "end", "", "When to end this measurement (if it's ongoing)")
 
 	// measurement types
 	flagsMeasure.BoolVar(&flags.msmping, "ping", false, "Schedule a ping measurement")
@@ -470,12 +470,12 @@ func parseStartStop(
 	spec *goatapi.MeasurementSpec,
 	oneoff bool,
 	start string,
-	stop string,
+	end string,
 ) {
 	starttime, starterr := parseTimeAlternatives(start)
-	stoptime, stoperr := parseTimeAlternatives(stop)
+	endtime, enderr := parseTimeAlternatives(end)
 
-	if oneoff && stoperr == nil {
+	if oneoff && enderr == nil {
 		fmt.Fprintf(os.Stderr, "ERROR: one-offs cannot have a stop time\n")
 		os.Exit(1)
 	}
@@ -483,11 +483,11 @@ func parseStartStop(
 		fmt.Fprintf(os.Stderr, "ERROR: start time cannot be in the past\n")
 		os.Exit(1)
 	}
-	if stoperr == nil && stoptime.Unix() <= time.Now().Unix() {
+	if enderr == nil && endtime.Unix() <= time.Now().Unix() {
 		fmt.Fprintf(os.Stderr, "ERROR: stop time cannot be in the past\n")
 		os.Exit(1)
 	}
-	if starterr == nil && stoperr == nil && starttime.Unix() >= stoptime.Unix() {
+	if starterr == nil && enderr == nil && starttime.Unix() >= endtime.Unix() {
 		fmt.Fprintf(os.Stderr, "ERROR: start time has to be before stop time\n")
 		os.Exit(1)
 	}
@@ -495,8 +495,8 @@ func parseStartStop(
 	if starterr == nil {
 		spec.StartTime(starttime)
 	}
-	if stoperr == nil {
-		spec.StopTime(stoptime)
+	if enderr == nil {
+		spec.EndTime(endtime)
 	}
 }
 
