@@ -222,4 +222,4 @@ The output formatters are extensible, feel free to write your own -- and contrib
 * `process()` to deal with one incoming result
 * `finish()` to finish processing, make a summary, etc.; may be called once per batch of results
 
-New output processors need to be registered in `goatcli.go`. See `some.go` or `native.go` for examples.
+New output processors need to be registered in `goatcli.go`. See `some.go` or `native.go` for examples and [the complete description of formatters and their options](output.md).
