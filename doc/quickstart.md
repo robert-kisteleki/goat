@@ -197,6 +197,14 @@ If results are requested to be shown immediately (e.g. the result stream is used
 
 Use the `measurement` subcommand with the `--stop ID` flag. The required key can be added to the config file as `stop_measurements`.
 
+## Adding and Removing Probes
+
+To add probes to an existing measurement use the `measurement` subcommand with the `--add ID` flag`. You can use the same probe specification language as for a new measurement.
+
+To remove probes from an existing measurement use the `measurement` subcommand with the `--remove ID` flag. You can use the `--probelist` similarly to scheduling a new measurement. Other probe specifications are not supported.
+
+The required key can be added to the config file as `update_measurements`.
+
 ## Status Checks
 
 Provide a short summary of the results for a [measurement status check](https://atlas.ripe.net/docs/apis/rest-api-manual/measurements/status-checks.html). It needs a measurement ID, and by default it summarises the results (is there an alert, how many probes are in that state out of how many total, and with the `most` output formatter the list of alerting probes).

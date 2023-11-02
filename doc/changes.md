@@ -4,6 +4,7 @@
 
 * CHANGED: renamed `--stop` to `--end` to indicate preferred end time of periodic measurements
 * NEW: add support to stop existing measurements
+* NEW: add support to add or remove probes to/from existing measurements (`--add` and `--remove`)
 
 ## v0.4.1
 

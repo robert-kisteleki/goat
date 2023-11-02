@@ -146,6 +146,7 @@ func readConfig(confFile string) bool {
 	loadApiKey(cfg, "list_measurements")
 	loadApiKey(cfg, "create_measurements")
 	loadApiKey(cfg, "stop_measurements")
+	loadApiKey(cfg, "update_measurements")
 	// TODO: add more API key variations here
 
 	// allow config to override where the API is
@@ -212,6 +213,7 @@ cachedir = ""
 list_measurements = ""
 create_measurements = ""
 stop_measurements = ""
+update_measurements = ""
 
 # default probe specifications for new measurements
 [probespec]
