@@ -8,6 +8,7 @@ It supports:
 * finding measurements
 * scheduling new measurements and immediately show its results
 * stopping existing measurements
+* modify participants of an existing measurement (add/remove probes)
 * downloading and displaying results of measurements
 * tuning in to result streaming
 * loading a local file containing measurement results
@@ -30,7 +31,6 @@ Check the [Quick Start Guide](doc/quickstart.md)
 
 # Future Additions / TODO
 
-* modify participants of an existing measurement (add/remove probes)
 * check credit balance, transfer credits, ...
 
 # Copyright, Contributing
