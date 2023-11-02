@@ -38,8 +38,10 @@ type measureFlags struct {
 	probelist   string
 	probereuse  string
 
-	// stop a measurement
-	msmstop uint
+	// stop or modify probes of a measurement
+	msmstop   uint
+	msmadd    uint
+	msmremove uint
 
 	// timing options
 	periodic  bool
@@ -99,12 +101,13 @@ var httpmethods = []string{"HEAD", "GET", "POST"}
 var httpversions = []string{"1.0", "1.1"}
 
 // Implementation of the "measure" subcommand. Parses command line flags
-// and interacts with goatAPI to initiate new measurements or stop existing ones
+// and interacts with goatAPI to initiate new measurements or stop or update existing ones
 func commandMeasure(args []string) {
 	flags := parseMeasureArgs(args)
 	spec, options := processMeasureFlags(flags)
 
-	if flags.msmstop != 0 {
+	switch {
+	case flags.msmstop != 0:
 		if getApiKey("stop_measurements") == nil {
 			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key stop_measurements - please consult the config file\n")
 			os.Exit(1)
@@ -119,6 +122,53 @@ func commandMeasure(args []string) {
 			os.Exit(1)
 		}
 
+		return
+
+	case flags.msmadd != 0 && flags.msmremove != 0:
+		fmt.Fprintf(os.Stderr, "ERROR: you can't ask for adding and removing probes at the same time\n")
+		os.Exit(1)
+
+	case flags.msmremove != 0:
+		if flags.probearea != "" ||
+			flags.probeasn != "" ||
+			flags.probecc != "" ||
+			flags.probeprefix != "" ||
+			flags.probereuse != "" ||
+			flags.probelist == "" {
+			fmt.Fprintf(os.Stderr, "ERROR: probe removal only supports an explicit list of probes (--probelist flag)\n")
+			os.Exit(1)
+		}
+		if getApiKey("update_measurements") == nil {
+			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key update_measurements - please consult the config file\n")
+			os.Exit(1)
+		}
+		spec.ApiKey(getApiKey("update_measurements"))
+		ids, err := spec.ParticipationRequest(flags.msmremove, true)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR while trying to update measurement %d: %v\n", flags.msmremove, err)
+			os.Exit(1)
+		}
+		if flagVerbose {
+			fmt.Printf("# Request IDs: %v\n", ids)
+		}
+		fmt.Println("OK")
+		return
+
+	case flags.msmadd != 0:
+		if getApiKey("update_measurements") == nil {
+			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key update_measurements - please consult the config file\n")
+			os.Exit(1)
+		}
+		spec.ApiKey(getApiKey("update_measurements"))
+		ids, err := spec.ParticipationRequest(flags.msmadd, true)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR while trying to update measurement %d: %v\n", flags.msmadd, err)
+			os.Exit(1)
+		}
+		if flagVerbose {
+			fmt.Printf("# Request IDs: %v\n", ids)
+		}
+		fmt.Println("OK")
 		return
 	}
 
@@ -271,8 +321,10 @@ func processMeasureFlags(flags *measureFlags) (
 func parseMeasureArgs(args []string) *measureFlags {
 	var flags measureFlags
 
-	// special case: stop a meeasurement
+	// special cases: stop a meeasurement, add or remove probes
 	flagsMeasure.UintVar(&flags.msmstop, "stop", 0, "Stop a particular measurement")
+	flagsMeasure.UintVar(&flags.msmadd, "add", 0, "Add probes to a particular measurement")
+	flagsMeasure.UintVar(&flags.msmremove, "remove", 0, "Remove probes from a particular measurement")
 
 	// generic flags
 	flagsMeasure.BoolVar(&flags.specOnly, "json", false, "Output the specification only, don't schedule the measurement")
