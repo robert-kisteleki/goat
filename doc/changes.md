@@ -2,6 +2,8 @@
 
 ## next
 
+** FIX: native trace out didn't show hop errors nicely
+
 ## v0.5.0
 
 * CHANGED: renamed `--stop` to `--end` to indicate preferred end time of periodic measurements

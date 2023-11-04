@@ -111,9 +111,12 @@ func nativeOutputTraceroute(res *result.TracerouteResult) {
 			if i == 0 {
 				fmt.Printf("%3d  ", hop.HopNumber)
 			}
-			if ans.Timeout {
+			switch {
+			case ans.Timeout:
 				fmt.Printf("*")
-			} else {
+			case ans.Error != nil:
+				fmt.Printf("[ERROR: %s]", *ans.Error)
+			default:
 				if last != ans.From.String() {
 					if last != "" {
 						fmt.Printf("\n     ")
