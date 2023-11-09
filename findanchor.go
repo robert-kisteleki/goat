@@ -36,8 +36,8 @@ func commandFindAnchor(args []string) {
 	filter, options := processFindAnchorFlags(flags)
 	formatter := options["output"].(string)
 
-	if !output.Verify(formatter) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+	if !output.Verify(formatter, "anchor") {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for anchor list\n", formatter)
 		os.Exit(1)
 	}
 

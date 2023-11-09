@@ -23,7 +23,14 @@ var verbose bool
 var total uint
 
 func init() {
-	output.Register("native", setup, start, process, finish)
+	output.Register("native", supports, setup, start, process, finish)
+}
+
+func supports(outtype string) bool {
+	if outtype == "ping" || outtype == "trace" {
+		return true
+	}
+	return false
 }
 
 func setup(isverbose bool, options []string) {

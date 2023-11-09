@@ -66,8 +66,8 @@ func commandFindProbe(args []string) {
 	filter, options := parseFindProbeFlags(flags)
 	formatter := options["output"].(string)
 
-	if !output.Verify(formatter) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+	if !output.Verify(formatter, "probe") {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for probe list\n", formatter)
 		os.Exit(1)
 	}
 

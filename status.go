@@ -30,8 +30,8 @@ func commandStatusCheck(args []string) {
 	filter, options := processStatusCheckFlags(flags)
 	formatter := options["output"].(string)
 
-	if !output.Verify(formatter) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+	if !output.Verify(formatter, "status") {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s' for status\n", formatter)
 		os.Exit(1)
 	}
 

@@ -189,8 +189,8 @@ func commandMeasure(args []string) {
 		return
 	}
 
-	if !output.Verify(formatter) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+	if !output.Verify(formatter, flagsToOutFormat(flags)) {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for '%s'\n", flagsToOutFormat(flags), formatter)
 		os.Exit(1)
 	}
 
@@ -823,4 +823,24 @@ func parseMeasurementNtp(
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func flagsToOutFormat(flags *measureFlags) string {
+	switch {
+	case flags.msmdns:
+		return "dns"
+	case flags.msmhttp:
+		return "http"
+	case flags.msmping:
+		return "ping"
+	case flags.msmntp:
+		return "ntp"
+	case flags.msmtls:
+		return "tls"
+	case flags.msmtrace:
+		return "trace"
+	default:
+		return ""
+	}
+
 }

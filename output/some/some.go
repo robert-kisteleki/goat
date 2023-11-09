@@ -13,6 +13,7 @@ package some
 import (
 	"fmt"
 	"goatcli/output"
+	"slices"
 
 	"github.com/robert-kisteleki/goatapi"
 	"github.com/robert-kisteleki/goatapi/result"
@@ -22,7 +23,17 @@ var verbose bool
 var total uint
 
 func init() {
-	output.Register("some", setup, start, process, finish)
+	output.Register("some", supports, setup, start, process, finish)
+}
+
+func supports(outtype string) bool {
+	if slices.Contains([]string{"ping", "trace", "dns", "tls", "ntp", "http"}, outtype) ||
+		outtype == "connection" || outtype == "uptime" ||
+		outtype == "probe" || outtype == "anchor" || outtype == "msm" ||
+		outtype == "status" {
+		return true
+	}
+	return false
 }
 
 func setup(isverbose bool, options []string) {

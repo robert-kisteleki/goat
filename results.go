@@ -51,7 +51,7 @@ func commandResultFromFlags(flags *resultFlags) {
 
 	formatter := options["output"].(string)
 
-	if !output.Verify(formatter) {
+	if !output.Verify(formatter, "") {
 		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
 		os.Exit(1)
 	}

@@ -33,7 +33,11 @@ type collectorItem struct {
 }
 
 func init() {
-	output.Register("dnsstat", setup, start, process, finish)
+	output.Register("dnsstat", supports, setup, start, process, finish)
+}
+
+func supports(outtype string) bool {
+	return outtype == "dns"
 }
 
 func setup(isverbose bool, options []string) {

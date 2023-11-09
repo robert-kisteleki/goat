@@ -72,8 +72,8 @@ func commandFindMsm(args []string) {
 	filter, options := parseFindMsmFlags(flags)
 	formatter := options["output"].(string)
 
-	if !output.Verify(formatter) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s'\n", formatter)
+	if !output.Verify(formatter, "msm") {
+		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for measurment list\n", formatter)
 		os.Exit(1)
 	}
 

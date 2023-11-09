@@ -21,11 +21,12 @@ import (
 )
 
 type outform struct {
-	format  string
-	setup   func(bool, []string)
-	start   func()
-	process func(any)
-	finish  func()
+	format   string
+	supports func(string) bool
+	setup    func(bool, []string)
+	start    func()
+	process  func(any)
+	finish   func()
 }
 
 var formats map[string]outform
@@ -38,18 +39,19 @@ func init() {
 // Register a new output formatter with a name and th needed functions
 func Register(
 	format string,
+	supports func(string) bool,
 	setup func(bool, []string),
 	start func(),
 	process func(any),
 	finish func(),
 ) {
-	formats[format] = outform{format, setup, start, process, finish}
+	formats[format] = outform{format, supports, setup, start, process, finish}
 }
 
 // Verify check is a particular formatter has been defined
-func Verify(format string) bool {
-	_, ok := formats[format]
-	return ok
+func Verify(format string, outtype string) bool {
+	out, ok := formats[format]
+	return ok && (outtype == "" || out.supports(outtype))
 }
 
 // Setup is called once, before any results are processed

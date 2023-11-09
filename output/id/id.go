@@ -21,7 +21,14 @@ var verbose bool
 var total uint
 
 func init() {
-	output.Register("id", setup, start, process, finish)
+	output.Register("id", supports, setup, start, process, finish)
+}
+
+func supports(outtype string) bool {
+	if outtype == "probe" || outtype == "anchor" || outtype == "msm" {
+		return true
+	}
+	return false
 }
 
 func setup(isverbose bool, options []string) {
