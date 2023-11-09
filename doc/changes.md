@@ -3,6 +3,7 @@
 ## next
 
 ** FIX: native trace out didn't show hop errors nicely
+** NEW: add shortcuts for measurement types, e.g. `goatcli ping ping.me` just works
 
 ## v0.5.0
 

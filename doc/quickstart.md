@@ -193,6 +193,23 @@ If the measurement scheduling request was successful and results are not request
 
 If results are requested to be shown immediately (e.g. the result stream is used) -- which is the defaut for one-off measurements -- then those results will be displayed as they become available. The `--output` and `--opt` flags can be used to control the output format. Also, `--save <FILENAME>` can be used to store incoming results in a file as well.
 
+### Shortcuts
+
+You can use shortcuts for all measurement types:
+
+```sh
+# this is equivalent to "goatcli measure -type ping -target x.y.z [other params]"
+$ goatcli ping x.y.z [other params]
+# this is equivalent to "goatcli measure -type trace -target x.y.z [other params]"
+$ goatcli trace x.y.z [other params]
+# this is equivalent to "goatcli measure -type dns -name x.y.z [other params]"
+$ goatcli dns x.y.z [other params]
+# this is equivalent to "goatcli measure -type ntp -target x.y.z [other params]"
+$ goatcli ntp x.y.z [other params]
+# this is equivalent to "goatcli measure -type http -target http://x.y.z/ [other params]"
+$ goatcli http http://x.y.z/ [other params]
+```
+
 ## Stop a Periodic Measurement
 
 Use the `measurement` subcommand with the `--stop ID` flag. The required key can be added to the config file as `stop_measurements`.
