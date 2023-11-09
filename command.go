@@ -44,6 +44,8 @@ func commandSelector() {
 		commandMeasure(append([]string{"-trace", "-target"}, args[1:]...))
 	case args[0] == "dns":
 		commandMeasure(append([]string{"-dns", "-name"}, args[1:]...))
+	case args[0] == "tls":
+		commandMeasure(append([]string{"-tls", "-target"}, args[1:]...))
 	case args[0] == "ntp":
 		commandMeasure(append([]string{"-ntp", "-target"}, args[1:]...))
 	case args[0] == "http":
@@ -74,11 +76,12 @@ func printUsage() {
 	fmt.Println("	result           download results")
 	fmt.Println("	status           measurement status check")
 	fmt.Println("	measure          start new measurement(s)")
-	fmt.Println("	ping             shortcut to -ping -target")
-	fmt.Println("	trace            shortcut to -trace -target")
 	fmt.Println("	dns              shortcut to -dns -name")
-	fmt.Println("	ntp              shortcut to -ntp -target")
 	fmt.Println("	http             shortcut to -http -target")
+	fmt.Println("	ntp              shortcut to -ntp -target")
+	fmt.Println("	ping             shortcut to -ping -target")
+	fmt.Println("	tls              shortcut to -tls -target")
+	fmt.Println("	trace            shortcut to -trace -target")
 	fmt.Println("")
 	fmt.Println("Options:")
 	flag.PrintDefaults()

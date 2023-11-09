@@ -206,6 +206,8 @@ $ goatcli trace x.y.z [other params]
 $ goatcli dns x.y.z [other params]
 # this is equivalent to "goatcli measure -type ntp -target x.y.z [other params]"
 $ goatcli ntp x.y.z [other params]
+# this is equivalent to "goatcli measure -type tls -target x.y.z [other params]"
+$ goatcli tls x.y.z [other params]
 # this is equivalent to "goatcli measure -type http -target http://x.y.z/ [other params]"
 $ goatcli http http://x.y.z/ [other params]
 ```
