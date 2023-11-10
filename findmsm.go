@@ -12,10 +12,10 @@ import (
 	"net/netip"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi"
-	"golang.org/x/exp/slices"
 )
 
 // struct to receive/store command line args for measurement filtering

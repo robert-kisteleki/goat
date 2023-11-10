@@ -11,12 +11,12 @@ import (
 	"goatcli/output"
 	"net/netip"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/robert-kisteleki/goatapi"
-	"golang.org/x/exp/slices"
 )
 
 // struct to receive/store command line args for new measurements

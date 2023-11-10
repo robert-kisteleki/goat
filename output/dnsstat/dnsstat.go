@@ -14,11 +14,11 @@ import (
 	"fmt"
 	"goatcli/output"
 	"goatcli/output/annotate"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
-	"golang.org/x/exp/slices"
 )
 
 var verbose bool

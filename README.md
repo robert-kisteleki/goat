@@ -3,9 +3,7 @@
 goatcli provides a CLI to interact with [RIPE Atlas](https://atlas.ripe.net/) [APIs](https://atlas.ripe.net/api/v2/) using [Golang](https://go.dev/). It uses the [goatapi](https://github.com/robert-kisteleki/goatapi/) under the hood. It is similar to [Magellan](https://github.com/RIPE-NCC/ripe-atlas-tools).
 
 It supports:
-* finding probes
-* finding anchors
-* finding measurements
+* finding probes, anchors and measurements
 * scheduling new measurements and immediately show its results
 * stopping existing measurements
 * modify participants of an existing measurement (add/remove probes)
@@ -14,7 +12,7 @@ It supports:
 * loading a local file containing measurement results
 * various kinds of output formatters for displaying and aggregating measurement results
 
-The tool needs Go 1.18 to compile.
+The tool needs Go 1.21 to compile.
 
 # Context
 

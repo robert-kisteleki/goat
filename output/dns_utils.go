@@ -8,10 +8,10 @@ package output
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
-	"golang.org/x/exp/slices"
 )
 
 func OutputDnsAnswer(detail *result.DnsAnswer) string {
