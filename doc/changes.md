@@ -2,9 +2,9 @@
 
 ## next
 
-** FIX: native trace out didn't show hop errors nicely
-** NEW: add shortcuts for measurement types, e.g. `goatcli ping ping.me` just works
-** NEW: pre-flight checks for output format
+* FIX: native trace out didn't show hop errors nicely
+* NEW: add shortcuts for measurement types, e.g. `goatcli ping ping.me` just works
+* NEW: pre-flight checks for output format
 
 ## v0.5.0
 
