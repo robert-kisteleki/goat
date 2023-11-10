@@ -228,6 +228,9 @@ func commandMeasure(args []string) {
 		if !flags.periodic {
 			rflags.limit = uint(flags.totalProbes)
 		}
+		if flags.msmdns {
+			rflags.outopts.Set("type:" + flags.msmopttype)
+		}
 
 		// most of the work is done by the implementation of the result streaming feature
 		commandResultFromFlags(&rflags)
@@ -392,7 +395,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 
 	flagsMeasure.Parse(args)
 
-	// orce uppercase for some
+	// force uppercase for some
 	flags.msmoptclass = strings.ToUpper(flags.msmoptclass)
 	flags.msmopttype = strings.ToUpper(flags.msmopttype)
 	flags.msmoptmethod = strings.ToUpper(flags.msmoptmethod)
