@@ -191,9 +191,10 @@ $ ./goatcli result -stream -id 10001 -output dnsstat -limit 10
 
 The above means that out of 10 results that were retrieved and processes, 9 were the same "correct" answer, and 1 was unsuccessful. In this basic form the aggregate only shows how many probes saw the different answers and it is mostly useful to find out if, from a population of probes, the answers are consistent or not.
 
-This output formatter accepts two options:
+This output formatter accepts three options:
 * `ccstat` for aggregation per country of the probe
 * `asnstat` for aggregation per ASN of the probe
+* `type:TYPE1+TYPE2+...` to give type hints / focuses to aggregate on
 
 One example of country code based aggregation:
 
@@ -212,3 +213,5 @@ $ ./goatcli result -stream -id 30001  -limit 10 -output dnsstat -opt asnstat
 ```
 
 In order to make the aggregates, the formatter uses the annotation helper, which maintains a cache of basic probe metadata (in `~/.cache/goat/probes.db`).
+
+The `type` hint can come handy if you want to "zoom in" on a particular answer type; other answers will be disregarded for the purposes of aggregation. For exampe if you're processing results and wan to check NS records only, use `-opt type:NS`.

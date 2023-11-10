@@ -235,8 +235,9 @@ true	1	9	[1005382]
 
 ## Output Formatters
 
-The output formatters are extensible, feel free to write your own -- and contribute that back to this repo! You only need to make a new package under `output` that implements four functions:
+The output formatters are extensible, feel free to write your own -- and contribute that back to this repo! You only need to make a new package under `output` that implements five functions:
 * `setup()` to initialise the output processor
+* `supports()` to answer whether the ouput formatter can handle a particular result
 * `start()` to prepare for processing results; may be called once per batch of results
 * `process()` to deal with one incoming result
 * `finish()` to finish processing, make a summary, etc.; may be called once per batch of results

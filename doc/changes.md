@@ -5,6 +5,7 @@
 * FIX: native trace out didn't show hop errors nicely
 * NEW: add shortcuts for measurement types, e.g. `goatcli ping ping.me` just works
 * NEW: pre-flight checks for output format
+* NEW: add `type:TYPE` option to the dnsstat output formatter
 
 ## v0.5.0
 

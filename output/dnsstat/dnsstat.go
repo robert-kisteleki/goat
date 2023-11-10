@@ -15,6 +15,7 @@ import (
 	"goatcli/output"
 	"goatcli/output/annotate"
 	"sort"
+	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
 	"golang.org/x/exp/slices"
@@ -25,6 +26,7 @@ var total uint
 var dnsstatcollector map[string]*collectorItem
 var makeCcStats bool
 var makeAsnStats bool
+var typeFocus []string
 
 type collectorItem struct {
 	Total uint
@@ -53,6 +55,17 @@ func setup(isverbose bool, options []string) {
 			fmt.Println("# Enabled ASN statistics")
 		}
 		makeAsnStats = true
+	}
+	for _, opt := range options {
+		if opt[:5] == "type:" {
+			typeFocus = strings.Split(opt[5:], "+")
+			break
+		}
+	}
+	if len(typeFocus) != 0 {
+		if verbose {
+			fmt.Printf("# Focusing on %v types\n", typeFocus)
+		}
 	}
 }
 
@@ -92,7 +105,7 @@ func process(res any) {
 			case len(resp.Error) > 0: // collect TIMEOUTs separetely
 				key = "TIMEOUT"
 			default: // for the rest: extract "useful data"
-				key = output.OutputDnsResponseDetail(&resp)
+				key = output.OutputDnsResponseFocus(&resp, typeFocus)
 			}
 
 			// count how many of these we had

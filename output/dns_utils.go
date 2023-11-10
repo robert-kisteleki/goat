@@ -36,3 +36,16 @@ func OutputDnsResponseDetail(resp *result.DnsResponse) string {
 	slices.Sort(set)
 	return "[" + strings.Join(set, " ") + "]"
 }
+
+func OutputDnsResponseFocus(resp *result.DnsResponse, typehint []string) string {
+	set := make([]string, 0)
+	for _, detail := range resp.AllAnswers() {
+		if len(typehint) == 0 ||
+			slices.Contains(typehint, result.DnsTypeNames[detail.Type]) {
+			set = append(set, detail.Data)
+		}
+	}
+	slices.Sort(set)
+	set = slices.Compact(set)
+	return "[" + strings.Join(set, " ") + "]"
+}
