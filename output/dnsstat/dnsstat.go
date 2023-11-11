@@ -26,6 +26,7 @@ var total uint
 var dnsstatcollector map[string]*collectorItem
 var makeCcStats bool
 var makeAsnStats bool
+var showprogress bool
 var typeFocus []string
 
 type collectorItem struct {
@@ -56,6 +57,12 @@ func setup(isverbose bool, options []string) {
 		}
 		makeAsnStats = true
 	}
+	if slices.Contains(options, "progress") {
+		if verbose {
+			fmt.Println("# Enabled progress indicator")
+		}
+		showprogress = true
+	}
 	for _, opt := range options {
 		if opt[:5] == "type:" {
 			typeFocus = strings.Split(opt[5:], "+")
@@ -71,10 +78,15 @@ func setup(isverbose bool, options []string) {
 
 func start() {
 	dnsstatcollector = make(map[string]*collectorItem)
+	annotate.InitProbeCache()
 }
 
 func process(res any) {
 	total++
+
+	if verbose && showprogress {
+		fmt.Printf("\r# Receiving results: %d", total)
+	}
 
 	switch t := res.(type) {
 	case *result.Result:
@@ -118,6 +130,10 @@ func finish() {
 	type valPlusCount struct {
 		val *collectorItem
 		key string
+	}
+
+	if verbose && showprogress {
+		fmt.Println()
 	}
 
 	vpc := make([]valPlusCount, 0)

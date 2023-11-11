@@ -191,10 +191,11 @@ $ ./goatcli result -stream -id 10001 -output dnsstat -limit 10
 
 The above means that out of 10 results that were retrieved and processes, 9 were the same "correct" answer, and 1 was unsuccessful. In this basic form the aggregate only shows how many probes saw the different answers and it is mostly useful to find out if, from a population of probes, the answers are consistent or not.
 
-This output formatter accepts three options:
+This output formatter accepts four options:
 * `ccstat` for aggregation per country of the probe
 * `asnstat` for aggregation per ASN of the probe
 * `type:TYPE1+TYPE2+...` to give type hints / focuses to aggregate on
+* `progress` to show a progress indicator as results are loaded
 
 One example of country code based aggregation:
 

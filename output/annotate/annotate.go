@@ -101,7 +101,12 @@ func SetCacheDir(cachedir string, beverbose bool) {
 	verbose = beverbose
 }
 
+func InitProbeCache() {
+	initProbeCache()
+}
+
 func initProbeCache() {
+
 	probeCache = make(map[uint]probeData, 0)
 	loadProbeCache()
 	probeCacheLoaded = true
