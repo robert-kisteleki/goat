@@ -8,6 +8,7 @@
 * NEW: add `type:TYPE` option to the dnsstat output formatter, automatically add this for new DNS measurements
 * CHANGED: update to go1.21 and update dependencies
 * NEW: add a progress indicator to the dnsstat output formatter
+* NEW: add DNS type to the native output formatter (for a `dig`-like output)
 
 ## v0.5.0
 

@@ -89,7 +89,7 @@ $ ./goatcli findmsm --id 34680813
 
 goatCLI can fetch results of exiting measurements (either from the data API, result streaming or from a local file). It's possible to choose what kind of output you want via output formatters:
 * `some` and `most` echo some basic properties of the results
-* `native` produces native-looking outputs (for now for ping and traceroute)
+* `native` produces native-looking outputs (for ping, traceroute and dns)
 * `dnsstat` provides basic statistics of DNS results
 * `id` and `idcsv` only output the ID of the results (`idcsv` does this in CSV format)
 

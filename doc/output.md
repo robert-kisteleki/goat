@@ -152,7 +152,7 @@ The following fields are appended to the `some` output:
 
 ## native
 
-The `native` formatter tries to display results close to how the native UNIX/Linux tools do. This applies to `ping` and `traceroute` results at the moment.
+The `native` formatter tries to display results close to how the native UNIX/Linux tools do. This applies to `ping`, `traceroute` and `dns` results at the moment.
 
 An example `ping` output:
 
@@ -177,6 +177,57 @@ PROBE 7066 traceroute to 193.0.14.129 (193.0.14.129): 255 hops max, 40 byte pack
   5  92.53.93.71 (92.53.93.71) 17.584 ms  17.731 ms  17.741 ms
   6  92.53.93.6 (92.53.93.6) 18.335 ms  18.069 ms  17.866 ms
   7  193.0.14.129 (193.0.14.129) 17.722 ms  17.736 ms  17.914 ms
+```
+
+An example `dns` output:
+
+```
+; Probe 1006413, source 212.42.102.204
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERR, id: 14593
+;; qr aa; QUERY: 1, ANSWER: 13, AUTHORITY: 0, ADDITIONAL: 15
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0; flags:; udp: 1232
+; NSID: 6e 73 31 2e 6b 7a 2d 70 77 71 2e 6b 2e 72 69 70 65 2e 6e 65 74 ("ns1.kz-pwq.k.ripe.net")
+;; QUESTION SECTION:
+;.	IN	NS
+
+;; ANSWER SECTION:
+.	518400	IN	NS	g.root-servers.net.
+.	518400	IN	NS	m.root-servers.net.
+.	518400	IN	NS	a.root-servers.net.
+.	518400	IN	NS	b.root-servers.net.
+.	518400	IN	NS	c.root-servers.net.
+.	518400	IN	NS	i.root-servers.net.
+.	518400	IN	NS	j.root-servers.net.
+.	518400	IN	NS	d.root-servers.net.
+.	518400	IN	NS	h.root-servers.net.
+.	518400	IN	NS	f.root-servers.net.
+.	518400	IN	NS	e.root-servers.net.
+.	518400	IN	NS	k.root-servers.net.
+.	518400	IN	NS	l.root-servers.net.
+
+;; ADDITIONAL SECTION:
+m.root-servers.net.	518400	IN	A	202.12.27.33
+l.root-servers.net.	518400	IN	A	199.7.83.42
+k.root-servers.net.	518400	IN	A	193.0.14.129
+j.root-servers.net.	518400	IN	A	192.58.128.30
+i.root-servers.net.	518400	IN	A	192.36.148.17
+h.root-servers.net.	518400	IN	A	198.97.190.53
+g.root-servers.net.	518400	IN	A	192.112.36.4
+f.root-servers.net.	518400	IN	A	192.5.5.241
+e.root-servers.net.	518400	IN	A	192.203.230.10
+d.root-servers.net.	518400	IN	A	199.7.91.13
+c.root-servers.net.	518400	IN	A	192.33.4.12
+b.root-servers.net.	518400	IN	A	199.9.14.201
+a.root-servers.net.	518400	IN	A	198.41.0.4
+m.root-servers.net.	518400	IN	AAAA	2001:dc3::35
+
+;; Query time: 75 msec
+;; SERVER: 193.0.14.129:53
+;; WHEN: 2023-11-11 15:35:28 +0100 CET
+;; MSG SIZE  rcvd: 512
 ```
 
 ## dnsstat

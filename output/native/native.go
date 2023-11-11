@@ -15,6 +15,7 @@ package native
 import (
 	"fmt"
 	"goatcli/output"
+	"strings"
 
 	"github.com/robert-kisteleki/goatapi/result"
 )
@@ -50,10 +51,8 @@ func process(res any) {
 			nativeOutputPing(rt)
 		case *result.TracerouteResult:
 			nativeOutputTraceroute(rt)
-			/*
-				case *result.DnsResult:
-					nativeOutputDns(rt)
-			*/
+		case *result.DnsResult:
+			nativeOutputDns(rt)
 		default:
 			fmt.Printf("No output formatter defined for result type '%T'\n", rt)
 		}
@@ -146,8 +145,93 @@ func nativeOutputTraceroute(res *result.TracerouteResult) {
 	}
 }
 
-/*
 func nativeOutputDns(res *result.DnsResult) {
+	fmt.Printf("; Probe %d, source %v\n", res.ProbeID, res.FromAddr)
 
+	for _, resp := range res.Responses {
+		fmt.Println(";; Got answer:")
+		fmt.Printf(";; ->>HEADER<<- opcode: QUERY, status: %s, id: %d\n",
+			result.DnsRcodeNames[resp.Rcode],
+			resp.QueryID,
+		)
+		flags := "qr"
+		if resp.Authoritative {
+			flags += " aa"
+		}
+		if resp.RecursionDesired {
+			flags += " rd"
+		}
+		flags += fmt.Sprintf("; QUERY: %d, ANSWER: %d, AUTHORITY: %d, ADDITIONAL: %d",
+			resp.QueriesCount,
+			resp.AnswerCount,
+			resp.NameServerCount,
+			resp.AdditionalCount,
+		)
+		fmt.Println(";;", flags)
+		if resp.RecursionDesired && !resp.RecursionAvailable {
+			fmt.Println(";; WARNING: recursion requested but not available")
+		}
+		fmt.Println()
+
+		if resp.AdditionalCount > 0 {
+			for _, ans := range resp.Extra {
+				// OPT
+				if ans.Type == 41 {
+					fmt.Println(";; OPT PSEUDOSECTION:")
+					fmt.Printf("; EDNS: version: %d; flags:; udp: %d\n", ans.Ttl, ans.Class)
+					if len(resp.Edsn0Nsid) > 0 {
+						hex := make([]string, len(resp.Edsn0Nsid))
+						for i, c := range resp.Edsn0Nsid {
+							hex[i] = fmt.Sprintf("%x", c)
+						}
+						fmt.Printf("; NSID: %s (\"%s\")\n", strings.Join(hex, " "), resp.Edsn0Nsid)
+					}
+				}
+			}
+		}
+
+		nativeOutputDnsResponse(resp)
+
+		fmt.Println()
+		fmt.Printf(";; Query time: %d msec\n", int(resp.ResponseTime))
+		fmt.Printf(";; SERVER: %v\n", resp.Destination)
+		fmt.Printf(";; WHEN: %v\n", resp.TimeStamp)
+		fmt.Printf(";; MSG SIZE  rcvd: %d\n", resp.ResponseSize)
+		fmt.Println()
+	}
 }
-*/
+
+func nativeOutputDnsResponse(resp result.DnsResponse) {
+	printrec := func(ans result.DnsAnswer) {
+		fmt.Printf("%s\t%d\t%s\t%s\t%s\n",
+			ans.Name,
+			ans.Ttl,
+			result.DnsClassNames[ans.Class],
+			result.DnsTypeNames[ans.Type],
+			ans.Data,
+		)
+	}
+	fmt.Println(";; QUESTION SECTION:")
+	fmt.Printf(";%s\t%s\t%s\n",
+		resp.Question.Name,
+		result.DnsClassNames[resp.Question.Class],
+		result.DnsTypeNames[resp.Question.Type],
+	)
+	fmt.Println()
+
+	if resp.AnswerCount > 0 {
+		fmt.Println(";; ANSWER SECTION:")
+		for _, ans := range resp.Answer {
+			printrec(ans)
+		}
+	}
+	if resp.AdditionalCount > 0 {
+		fmt.Println()
+		fmt.Println(";; ADDITIONAL SECTION:")
+		for _, ans := range resp.Extra {
+			if ans.Type != 41 { // skip OPT
+				printrec(ans)
+			}
+		}
+	}
+}
