@@ -6,7 +6,7 @@ require github.com/go-ini/ini v1.67.0
 
 require (
 	github.com/google/uuid v1.4.0
-	github.com/robert-kisteleki/goatapi v0.5.0
+	github.com/robert-kisteleki/goatapi v0.6.0
 )
 
 require (
@@ -20,4 +20,4 @@ require (
 )
 
 // uncomment the next line for local goatcli/goatapi development (adapt path as needed)
-replace github.com/robert-kisteleki/goatapi => ../goatapi
+//replace github.com/robert-kisteleki/goatapi => ../goatapi

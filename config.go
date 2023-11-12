@@ -45,7 +45,7 @@ var (
 	probeSpecReuse  string
 )
 
-const version = "v0.5.0"
+const version = "v0.6.0"
 const CLIName = "goatCLI " + version
 
 var defaultConfigDir = os.Getenv("HOME") + "/.config"
