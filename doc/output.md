@@ -235,7 +235,7 @@ m.root-servers.net.	518400	IN	AAAA	2001:dc3::35
 The `dnsstat` formatter consumes multiple DNS results and produces a summary of those results. For example:
 
 ```
-$ ./goatcli result -stream -id 10001 -output dnsstat -limit 10
+$ ./goat result -stream -id 10001 -output dnsstat -limit 10
 9	"[[IN SOA . '.	86400	IN	SOA	a.root-servers.net. nstld.verisign-grs.com. 2023102600 1800 900 604800 86400']]"
 1	"REFUSED"
 ```
@@ -251,7 +251,7 @@ This output formatter accepts four options:
 One example of country code based aggregation:
 
 ```
-$ ./goatcli result -stream -id 30001  -limit 10 -output dnsstat -opt ccstat
+$ ./goat result -stream -id 30001  -limit 10 -output dnsstat -opt ccstat
 18	"NXDOMAIN"	 ID:3 PT:3 DK:2 NO:2 PL:2 UA:2 SE:1 NL:1 HU:1 IE:1
 1	"TIMEOUT"	 IE:1
 ```
@@ -259,11 +259,11 @@ $ ./goatcli result -stream -id 30001  -limit 10 -output dnsstat -opt ccstat
 Similarly with ASN based aggregation:
 
 ```
-$ ./goatcli result -stream -id 30001  -limit 10 -output dnsstat -opt asnstat
+$ ./goat result -stream -id 30001  -limit 10 -output dnsstat -opt asnstat
 20	"NXDOMAIN"	 AS2860:3 AS47583:3 AS132420:3 AS7922:2 AS3209:2 AS57344:2 AS63473:1 AS(N/A):1 AS4771:1 AS3214:1
 1	"TIMEOUT"	 AS63473:1
 ```
 
 In order to make the aggregates, the formatter uses the annotation helper, which maintains a cache of basic probe metadata (in `~/.cache/goat/probes.db`).
 
-The `type` hint can come handy if you want to "zoom in" on a particular answer type; other answers will be disregarded for the purposes of aggregation. For exampe if you're processing results and wan to check NS records only, use `-opt type:NS`.
+The `type` hint can come handy if you want to "zoom in" on a particular answer type; other answers will be disregarded for the purposes of aggregation. For exampe if you're processing results and want to check NS records only, use `-opt type:NS`.

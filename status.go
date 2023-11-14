@@ -4,92 +4,147 @@
   See LICENSE file for the license.
 */
 
-package main
+package goat
 
 import (
+	"encoding/json"
 	"fmt"
-	"goatcli/output"
-	"os"
-
-	"github.com/robert-kisteleki/goatapi"
+	"io/ioutil"
+	"net/url"
 )
 
-// struct to receive/store command line args for status checks
-type statusCheckFlags struct {
-	filterID      uint // measurement ID
-	filterAllRTTs bool // all responses?
-
-	output  string
-	outopts multioption
+// status check result object, as it comes from the API
+type StatusCheckResult struct {
+	GloblaAlert bool                      `json:"global_alert"`
+	TotalAlerts uint                      `json:"total_alerts"`
+	Probes      map[uint]StatusCheckProbe `json:"probes"`
 }
 
-// Implementation of the "status check" subcommand. Parses command line flags
-// and interacts with goatAPI to apply those filters+options to fetch the result
-func commandStatusCheck(args []string) {
-	flags := parseStatusCheckArgs(args)
-	filter, options := processStatusCheckFlags(flags)
-	formatter := options["output"].(string)
+// status check result for one probe
+type StatusCheckProbe struct {
+	Alert          bool       `json:"alert"`
+	Last           float64    `json:"last"`
+	LastPacketLoss float64    `json:"last_packet_loss"`
+	Source         string     `json:"source"`
+	AllRTTs        *[]float64 `json:"all"`
+}
 
-	if !output.Verify(formatter, "status") {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown output format '%s' for status\n", formatter)
-		os.Exit(1)
-	}
+// a status check result: error or value
+type AsyncStatusCheckResult struct {
+	Status *StatusCheckResult
+	Error  error
+}
 
-	// most of the work is done by goatAPI
-	statuses := make(chan goatapi.AsyncStatusCheckResult)
-	go filter.StatusCheck(flagVerbose, statuses)
+// ShortString produces a short textual description of the status
+func (sc *StatusCheckResult) ShortString() string {
+	text := fmt.Sprintf("%v\t%d\t%d",
+		sc.GloblaAlert,
+		sc.TotalAlerts,
+		len(sc.Probes),
+	)
+	return text
+}
 
-	output.Setup(formatter, flagVerbose, flags.outopts)
-	output.Start(formatter)
-	for status := range statuses {
-		if status.Error != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: %v\n", status.Error)
-			os.Exit(1)
-		} else {
-			output.Process(formatter, status)
+// LongString produces a longer textual description of the status
+func (sc *StatusCheckResult) LongString() string {
+	text := sc.ShortString()
+
+	// add the list of alerting probes to the output
+	alerted := make([]uint, 0)
+	for probe, status := range sc.Probes {
+		if status.Alert {
+			alerted = append(alerted, probe)
 		}
 	}
-	output.Finish(formatter)
+	text += fmt.Sprintf("\t%v", alerted)
+	return text
 }
 
-// Process flags (filters & options), pass most of them on to goatAPI
-// while doing sanity checks on values
-func processStatusCheckFlags(flags *statusCheckFlags) (
-	filter goatapi.StatusCheckFilter,
-	options map[string]any,
-) {
-	options = make(map[string]any)
-	filter = goatapi.NewStatusCheckFilter()
+// StatusCheckFilter struct holds specified filters and other options
+type StatusCheckFilter struct {
+	params  url.Values
+	id      uint
+	showall bool
+}
 
-	// options
+// NewStatusCheckFilter prepares a new status check filter object
+func NewStatusCheckFilter() StatusCheckFilter {
+	sc := StatusCheckFilter{}
+	sc.params = url.Values{}
+	return sc
+}
 
-	options["output"] = flags.output
+// MsmID sets the measurement ID for which we ask the status check
+func (filter *StatusCheckFilter) MsmID(id uint) {
+	filter.id = id
+}
 
-	// filters
-
-	if flags.filterID == 0 {
-		fmt.Fprintf(os.Stderr, "ERROR: measurement ID must be spcified\n")
-		os.Exit(1)
+// GetAllRTTs asks for all RTTs to be returned
+func (filter *StatusCheckFilter) GetAllRTTs(showall bool) {
+	filter.showall = showall
+	if showall {
+		filter.params.Add("show_all", fmt.Sprintf("%v", showall))
 	}
-	filter.MsmID(flags.filterID)
-	filter.GetAllRTTs(flags.filterAllRTTs)
-
-	return
 }
 
-// Define and parse command line args for this subcommand using the flags package
-func parseStatusCheckArgs(args []string) *statusCheckFlags {
-	var flags statusCheckFlags
+// Verify sanity of applied filters
+func (filter *StatusCheckFilter) verifyFilters() error {
+	if filter.id == 0 {
+		return fmt.Errorf("ID must be specified")
+	}
 
-	// filters
-	flagsStatusCheck.UintVar(&flags.filterID, "id", 0, "Measurement ID to check status for")
-	flagsStatusCheck.BoolVar(&flags.filterAllRTTs, "all", false, "Retrieve all recent RTTs")
+	return nil
+}
 
-	// options
-	flagsStatusCheck.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
-	flagsStatusCheck.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
+// StatusCheck returns a status check result
+func (filter *StatusCheckFilter) StatusCheck(
+	verbose bool,
+	statuses chan AsyncStatusCheckResult,
+) {
+	defer close(statuses)
 
-	flagsStatusCheck.Parse(args)
+	var status StatusCheckResult
 
-	return &flags
+	// sanity checks - late in the process, but not too late
+	err := filter.verifyFilters()
+	if err != nil {
+		statuses <- AsyncStatusCheckResult{&status, err}
+		return
+	}
+
+	// make the request
+	query := fmt.Sprintf("%smeasurements/%d/status-check?%s", apiBaseURL, filter.id, filter.params.Encode())
+	resp, err := apiGetRequest(verbose, query, nil)
+	if err != nil {
+		statuses <- AsyncStatusCheckResult{&status, err}
+		return
+	}
+
+	// read the response - it is a single JSON
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		statuses <- AsyncStatusCheckResult{&status, err}
+		return
+	}
+
+	// check for error(s)
+	if resp.StatusCode != 200 {
+		var errors MultiErrorResponse
+		err = json.Unmarshal(data, &errors)
+		if err != nil {
+			statuses <- AsyncStatusCheckResult{&status, err}
+			return
+		}
+		statuses <- AsyncStatusCheckResult{&status, fmt.Errorf(errors.Error.Detail)}
+		return
+	}
+
+	// parse the response into a status object
+	err = json.Unmarshal(data, &status)
+	if err != nil {
+		statuses <- AsyncStatusCheckResult{&status, err}
+		return
+	}
+
+	statuses <- AsyncStatusCheckResult{&status, nil}
 }

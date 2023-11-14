@@ -4,846 +4,859 @@
   See LICENSE file for the license.
 */
 
-package main
+package goat
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"goatcli/output"
+	"net/http"
 	"net/netip"
-	"os"
 	"slices"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/robert-kisteleki/goatapi"
+	"github.com/google/uuid"
 )
 
-// struct to receive/store command line args for new measurements
-type measureFlags struct {
-	specOnly bool
-	output   string
-	outopts  multioption
-	save     string
-	result   bool
-	noresult bool
-
-	// probe options
-	probetaginc string
-	probetagexc string
-	probecc     string
-	probearea   string
-	probeasn    string
-	probeprefix string
-	probelist   string
-	probereuse  string
-
-	// stop or modify probes of a measurement
-	msmstop   uint
-	msmadd    uint
-	msmremove uint
-
-	// timing options
-	periodic  bool
-	starttime string
-	endtime   string
-
-	// common measurement options
-	msmdescr          string
-	msmtarget         string
-	msmaf             uint
-	msminterval       uint
-	msmspread         uint
-	msmresolveonprobe bool
-	msmskipdnscheck   bool
-	msmtags           string
-
-	// measurement types
-	msmping  bool
-	msmtrace bool
-	msmdns   bool
-	msmtls   bool
-	msmhttp  bool
-	msmntp   bool
-
-	// type specific measurement options
-	msmoptname     string // DNS: name to look up
-	msmoptmethod   string // HTTP: method (GET, POST, HEAD)
-	msmoptparis    uint   // TRACE: paris ID
-	msmoptprotocol string // TRACE: protocol (UDP, TCP, ICMP), DNS: protocol (UDP, TCP)
-	msmoptminhop   uint   // TRACE: first hop
-	msmoptmaxhop   uint   // TRACE: last hop
-	msmoptnsid     bool   // DNS: set NSID
-	msmoptqbuf     bool   // DNS: store qbuf
-	msmoptabuf     bool   // DNS: store abuf
-	msmoptrd       bool   // DNS: RD bit
-	msmoptdo       bool   // DNS: DO bit
-	msmoptcd       bool   // DNS: CD bit
-	msmoptretry    uint   // DNS: retry count
-	msmoptclass    string // DNS: class (IN, CHAOS)
-	msmopttype     string // DNS: type (A, AAAA, NS, CNAME, ...)
-	msmoptport     uint   // TLS, HTTP: port number
-	msmoptsni      string // TLS: SNI
-	msmoptversion  string // HTTP: version (1.0, 1.1)
-	msmopttiming1  bool   // HTTP: extended timing
-	msmopttiming2  bool   // HTTP: more extended timing
-
-	totalProbes int // how many probes were asked for
+// Measurement specification object, to be passed to the API
+type MeasurementSpec struct {
+	apiSpec measurementSpec
+	verbose bool
+	key     *uuid.UUID
 }
 
-var dnstypes = []string{
-	"A", "AAAA", "ANY", "CNAME", "DNSKEY", "DS", "MX", "NS", "NSEC", "PTR", "RRSIG", "SOA", "TXT", "SRV", "NAPTR", "TLSA",
+type measurementSpec struct {
+	Definitons []measurementTargetDefinition `json:"definitions"`
+	Probes     []measurementProbeDefinition  `json:"probes"`
+	OneOff     bool                          `json:"is_oneoff"`
+	BillTo     *string                       `json:"bill_to,omitempty"`
+	Start      *uniTime                      `json:"start_time,omitempty"`
+	End        *uniTime                      `json:"stop_time,omitempty"`
 }
-var dnsclasses = []string{"IN", "CHAOS"}
-var dnsprotocols = []string{"UDP", "TCP"}
-var traceprotocols = []string{"UDP", "TCP", "ICMP"}
-var httpmethods = []string{"HEAD", "GET", "POST"}
-var httpversions = []string{"1.0", "1.1"}
 
-// Implementation of the "measure" subcommand. Parses command line flags
-// and interacts with goatAPI to initiate new measurements or stop or update existing ones
-func commandMeasure(args []string) {
-	flags := parseMeasureArgs(args)
-	spec, options := processMeasureFlags(flags)
+type measurementTargetDefinition interface {
+	MarshalJSON() (b []byte, e error)
+}
 
-	switch {
-	case flags.msmstop != 0:
-		if getApiKey("stop_measurements") == nil {
-			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key stop_measurements - please consult the config file\n")
-			os.Exit(1)
+type measurementTargetBase struct {
+	Description    string    `json:"description"`
+	Target         *string   `json:"target,omitempty"`
+	Type           string    `json:"type"`
+	AddressFamily  uint      `json:"af"`
+	Interval       *uint     `json:"interval,omitempty"`
+	ResolveOnProbe *bool     `json:"resolve_on_probe,omitempty"`
+	Tags           *[]string `json:"tags,omitempty"`
+	Spread         *uint     `json:"spread,omitempty"`
+	SkipDNSCheck   *bool     `json:"skip_dns_check,omitempty"`
+}
+
+type measurementTargetPing struct {
+	measurementTargetBase
+	Packets        *uint `json:"packets,omitempty"`
+	PacketSize     *uint `json:"packet_size,omitempty"`
+	PacketInterval *uint `json:"packet_interval,omitempty"`
+	IncludeProbeID *bool `json:"include_probe_id,omitempty"`
+}
+
+type measurementTargetTrace struct {
+	measurementTargetBase
+	Protocol        string `json:"protocol"`
+	ResponseTimeout *uint  `json:"response_timeout,omitempty"`
+	Packets         *uint  `json:"packets,omitempty"`
+	PacketSize      *uint  `json:"packet_size,omitempty"` // ?
+	ParisId         uint   `json:"paris,omitempty"`
+	FirstHop        *uint  `json:"first_hop,omitempty"`
+	LastHop         *uint  `json:"max_hops,omitempty"`
+	DestinationEH   *uint  `json:"destination_option_size,omitempty"`
+	HopByHopEH      *uint  `json:"hop_by_hop_option_size,omitempty"`
+	DontFragment    *bool  `json:"dont_fragment,omitempty"`
+}
+
+type measurementTargetDns struct {
+	measurementTargetBase
+	Protocol       string  `json:"protocol"`
+	Class          string  `json:"query_class"`
+	Type           string  `json:"query_type"`
+	Argument       *string `json:"query_argument,omitempty"`
+	UseMacros      *bool   `json:"use_macros,omitempty"`
+	UseResolver    *bool   `json:"use_probe_resolver,omitempty"`
+	Nsid           *bool   `json:"set_nsid_bit,omitempty"`
+	UdpPayloadSize *uint   `json:"udp_payload_size,omitempty"`
+	Retries        *uint   `json:"retry,omitempty"`
+	IncludeQbuf    *bool   `json:"include_qbuf,omitempty"`
+	IncludeAbuf    *bool   `json:"include_abuf,omitempty"`
+	PrependProbeID *bool   `json:"prepend_probe_id,omitempty"`
+	SetRd          *bool   `json:"set_rd_bit,omitempty"`
+	SetDo          *bool   `json:"set_do_bit,omitempty"`
+	SetCd          *bool   `json:"set_cd_bit,omitempty"`
+	Timeout        *uint   `json:"timeout,omitempty"`
+}
+
+type measurementTargetTls struct {
+	measurementTargetBase
+	Port uint    `json:"port"`
+	Sni  *string `json:"hostname,omitempty"`
+}
+
+type measurementTargetNtp struct {
+	measurementTargetBase
+	Packets *uint `json:"packets,omitempty"`
+	Timeout *uint `json:"timeout,omitempty"`
+}
+
+type measurementTargetHttp struct {
+	measurementTargetBase
+	Method             string  `json:"method"`
+	Path               string  `json:"path"`
+	Query              *string `json:"query_string,omitempty"`
+	Port               *uint   `json:"port,omitempty"`
+	HeaderBytes        *uint   `json:"header_bytes,omitempty"`
+	Version            *string `json:"version,omitempty"`
+	ExtendedTiming     *bool   `json:"extended_timing,omitempty"`
+	MoreExtendedTiming *bool   `json:"more_extended_timing,omitempty"`
+}
+
+// various measurement options
+type BaseOptions struct {
+	ResolveOnProbe bool
+	Interval       uint
+	Tags           []string
+	Spread         uint
+	SkipDNSCheck   bool
+}
+type PingOptions struct {
+	Packets        uint // API default: 3
+	PacketSize     uint // API default: 48 bytes
+	PacketInterval uint // Time between packets (ms)
+	IncludeProbeID bool // Include the probe ID (encoded as ASCII digits) as part of the payload
+}
+type TraceOptions struct {
+	Protocol        string // default: UDP
+	ResponseTimeout uint   // API default: 4000 (ms)
+	Packets         uint   // API default: 3
+	PacketSize      uint   // API default: 48 bytes
+	ParisId         uint   // API default: 16, default: 0
+	FirstHop        uint   // API default: 1
+	LastHop         uint   // API default: 32
+	DestinationEH   uint   // API default: 0
+	HopByHopEH      uint   // API default: 0
+	DontFragment    bool   // API default: false
+}
+type DnsOptions struct {
+	Protocol       string // default: UDP
+	Class          string
+	Type           string
+	Argument       string
+	UseMacros      bool // API default: false
+	UseResolver    bool // API default: false
+	Nsid           bool // API default: false
+	UdpPayloadSize uint // API default: 512
+	Retries        uint // API default: 0
+	IncludeQbuf    bool // API default: false
+	IncludeAbuf    bool // API default: false
+	PrependProbeID bool // API default: false
+	SetRd          bool // API default: false
+	SetDo          bool // API default: false
+	SetCd          bool // API default: false
+	Timeout        uint // API default: 5000 (ms)
+}
+type TlsOptions struct {
+	Port uint // API default: 443
+	Sni  string
+}
+type NtpOptions struct {
+	Packets uint // API default: 3
+	Timeout uint // API default: 4000 (ms)
+}
+type HttpOptions struct {
+	Method             string
+	Path               string
+	Query              string
+	Port               uint
+	HeaderBytes        uint
+	Version            string
+	ExtendedTiming     bool
+	MoreExtendedTiming bool
+}
+
+type measurementProbeDefinition struct {
+	Type      string                          `json:"type"`
+	Value     string                          `json:"value"`
+	Requested int                             `json:"requested"`
+	Tags      *measurementProbeDefinitionTags `json:"tags,omitempty"`
+}
+
+type measurementProbeDefinitionTags struct {
+	Include *[]string `json:"include,omitempty"`
+	Exclude *[]string `json:"exclude,omitempty"`
+}
+
+type MeasurementList struct {
+	Measurements []uint `json:"measurements"`
+}
+
+var Areas = []string{"WW", "West", "North-Central", "South-Central", "North-East", "South-East"}
+var TraceProtocols = []string{"ICMP", "UDP", "TCP"}
+var DnsProtocols = []string{"UDP", "TCP"}
+var DnsClasses = []string{"IN", "CHAOS"}
+var DnsTypes = []string{"A", "AAAA", "ANY", "CNAME", "DNSKEY", "DS", "MX", "NS", "NSEC", "PTR", "RRSIG", "SOA", "TXT", "SRV", "NAPTR", "TLSA"}
+var HttpMethods = []string{"GET", "HEAD", "POST"}
+var HttpVersions = []string{"1.0", "1.1"}
+
+func NewMeasurementSpec() (spec *MeasurementSpec) {
+	spec = new(MeasurementSpec)
+	spec.apiSpec.Definitons = make([]measurementTargetDefinition, 0)
+	spec.apiSpec.Probes = make([]measurementProbeDefinition, 0)
+	return spec
+}
+
+func (spec *MeasurementSpec) Verbose(verbose bool) {
+	spec.verbose = verbose
+}
+
+func (spec *MeasurementSpec) StartTime(time time.Time) {
+	t := uniTime(time)
+	spec.apiSpec.Start = &t
+}
+
+func (spec *MeasurementSpec) EndTime(time time.Time) {
+	t := uniTime(time)
+	spec.apiSpec.End = &t
+}
+
+func (spec *MeasurementSpec) OneOff(oneoff bool) {
+	spec.apiSpec.OneOff = oneoff
+}
+
+func (spec *MeasurementSpec) BillTo(billto string) {
+	spec.apiSpec.BillTo = &billto
+}
+
+func (spec *MeasurementSpec) addProbeSet(
+	settype string,
+	setvalue string,
+	n int,
+	tagsincl *[]string,
+	tagsexcl *[]string,
+) error {
+	if n < -1 || n == 0 {
+		return fmt.Errorf("number of probes requested should be positive")
+	}
+	msp := measurementProbeDefinition{
+		Type:      settype,
+		Value:     setvalue,
+		Requested: n,
+	}
+	if (tagsincl != nil && len(*tagsincl) > 0) || (tagsexcl != nil && len(*tagsexcl) > 0) {
+		msp.Tags = new(measurementProbeDefinitionTags)
+		if tagsincl != nil && len(*tagsincl) > 0 {
+			msp.Tags.Include = tagsincl
 		}
-		spec.ApiKey(getApiKey("stop_measurements"))
-
-		err := spec.Stop(flags.msmstop)
-		if err == nil {
-			fmt.Printf("Measurement %d has been stopped.\n", flags.msmstop)
-		} else {
-			fmt.Fprintf(os.Stderr, "ERROR while trying to stop measurement %d: %v\n", flags.msmstop, err)
-			os.Exit(1)
+		if tagsexcl != nil && len(*tagsexcl) > 0 {
+			msp.Tags.Exclude = tagsexcl
 		}
+	}
+	spec.apiSpec.Probes = append(spec.apiSpec.Probes, msp)
+	return nil
+}
 
-		return
+func (spec *MeasurementSpec) AddProbesArea(area string, n int) error {
+	return spec.AddProbesAreaWithTags(area, n, nil, nil)
+}
 
-	case flags.msmadd != 0 && flags.msmremove != 0:
-		fmt.Fprintf(os.Stderr, "ERROR: you can't ask for adding and removing probes at the same time\n")
-		os.Exit(1)
+func (spec *MeasurementSpec) AddProbesCountry(cc string, n int) error {
+	return spec.AddProbesCountryWithTags(cc, n, nil, nil)
+}
 
-	case flags.msmremove != 0:
-		if flags.probearea != "" ||
-			flags.probeasn != "" ||
-			flags.probecc != "" ||
-			flags.probeprefix != "" ||
-			flags.probereuse != "" ||
-			flags.probelist == "" {
-			fmt.Fprintf(os.Stderr, "ERROR: probe removal only supports an explicit list of probes (--probelist flag)\n")
-			os.Exit(1)
+func (spec *MeasurementSpec) AddProbesList(list []uint) error {
+	return spec.AddProbesListWithTags(list, nil, nil)
+}
+
+func (spec *MeasurementSpec) AddProbesReuse(msm uint, n int) error {
+	return spec.AddProbesReuseWithTags(msm, n, nil, nil)
+}
+
+func (spec *MeasurementSpec) AddProbesAsn(asn uint, n int) error {
+	return spec.AddProbesReuseWithTags(asn, n, nil, nil)
+}
+
+func (spec *MeasurementSpec) AddProbesPrefix(prefix netip.Prefix, n int) error {
+	return spec.AddProbesPrefixWithTags(prefix, n, nil, nil)
+}
+
+func (spec *MeasurementSpec) AddProbesAreaWithTags(area string, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	if !slices.Contains(Areas, area) {
+		return fmt.Errorf("invalid area: %v", area)
+	}
+	return spec.addProbeSet("area", area, n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesCountryWithTags(cc string, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	if len(cc) != 2 { // TODO: add proper country code validation
+		return fmt.Errorf("invalid country code %v", cc)
+	}
+	return spec.addProbeSet("cc", cc, n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesListWithTags(list []uint, tagsincl *[]string, tagsexcl *[]string) error {
+	n := len(list)
+	if n == 0 {
+		return fmt.Errorf("probe list cannot be empty")
+	}
+	return spec.addProbeSet("probes", makeCsv(list), n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesReuseWithTags(msm uint, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	if msm <= 1000000 {
+		return fmt.Errorf("measurement ID must be >1M")
+	}
+	return spec.addProbeSet("msm", fmt.Sprintf("%d", msm), n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesAsnWithTags(asn uint, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	if asn <= 0 {
+		return fmt.Errorf("asn must be positive")
+	}
+	return spec.addProbeSet("asn", fmt.Sprintf("%d", asn), n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesPrefixWithTags(prefix netip.Prefix, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	return spec.addProbeSet("prefix", fmt.Sprintf("%v", prefix), n, tagsincl, tagsexcl)
+}
+
+func (def *measurementTargetBase) addCommonFields(
+	typ string,
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+) error {
+	if description == "" {
+		return fmt.Errorf("description cannot be empty")
+	}
+	if target == "" && typ != "dns" {
+		return fmt.Errorf("target cannot be empty")
+	}
+	if af != 4 && af != 6 {
+		return fmt.Errorf("address familty must be 4 or 6")
+	}
+
+	// common fields
+	def.Type = typ
+	def.Description = description
+	if target != "" {
+		def.Target = &target
+	}
+	def.AddressFamily = af
+
+	if baseoptions != nil {
+		if baseoptions.ResolveOnProbe {
+			def.ResolveOnProbe = &baseoptions.ResolveOnProbe
 		}
-		if getApiKey("update_measurements") == nil {
-			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key update_measurements - please consult the config file\n")
-			os.Exit(1)
+		def.SkipDNSCheck = &baseoptions.SkipDNSCheck
+		if baseoptions.Interval != 0 {
+			def.Interval = &baseoptions.Interval
 		}
-		spec.ApiKey(getApiKey("update_measurements"))
-		ids, err := spec.ParticipationRequest(flags.msmremove, true)
+		if baseoptions.Interval != 0 {
+			def.Interval = &baseoptions.Interval
+		}
+		if baseoptions.Spread != 0 {
+			def.Spread = &baseoptions.Spread
+		}
+		if baseoptions.Tags != nil {
+			def.Tags = &baseoptions.Tags
+		}
+	}
+
+	return nil
+}
+
+func (spec *MeasurementSpec) AddPing(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	pingoptions *PingOptions,
+) error {
+	var def = new(measurementTargetPing)
+
+	if err := def.addCommonFields("ping", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// ping specific fields
+	if pingoptions != nil {
+		if pingoptions.Packets != 0 {
+			def.Packets = &pingoptions.Packets
+		}
+		if pingoptions.PacketSize != 0 {
+			def.PacketSize = &pingoptions.PacketSize
+		}
+		if pingoptions.PacketInterval != 0 {
+			def.PacketInterval = &pingoptions.PacketInterval
+		}
+		if pingoptions.IncludeProbeID {
+			def.IncludeProbeID = &pingoptions.IncludeProbeID
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
+func (spec *MeasurementSpec) AddTrace(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	traceoptions *TraceOptions,
+) error {
+	var def = new(measurementTargetTrace)
+
+	if err := def.addCommonFields("traceroute", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Protocol = "UDP"
+	def.ParisId = 0
+
+	// trace specific fields
+	if traceoptions != nil {
+		if traceoptions.Protocol != "" &&
+			slices.Contains(TraceProtocols, traceoptions.Protocol) {
+			def.Protocol = traceoptions.Protocol
+		}
+		if traceoptions.ResponseTimeout != 0 {
+			def.ResponseTimeout = &traceoptions.ResponseTimeout
+		}
+		if traceoptions.Packets != 0 {
+			def.Packets = &traceoptions.Packets
+		}
+		if traceoptions.PacketSize != 0 {
+			def.PacketSize = &traceoptions.PacketSize
+		}
+		if traceoptions.ParisId != 0 {
+			def.ParisId = traceoptions.ParisId
+		}
+		if traceoptions.FirstHop != 0 {
+			def.FirstHop = &traceoptions.FirstHop
+		}
+		if traceoptions.LastHop != 0 {
+			def.LastHop = &traceoptions.LastHop
+		}
+		if traceoptions.DestinationEH != 0 {
+			def.DestinationEH = &traceoptions.DestinationEH
+		}
+		if traceoptions.HopByHopEH != 0 {
+			def.HopByHopEH = &traceoptions.HopByHopEH
+		}
+		if traceoptions.DontFragment {
+			def.DontFragment = &traceoptions.DontFragment
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
+func (spec *MeasurementSpec) AddDns(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	dnsoptions *DnsOptions,
+) error {
+	var def = new(measurementTargetDns)
+
+	if err := def.addCommonFields("dns", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Protocol = "UDP"
+	def.Class = "IN"
+	def.Type = "A"
+
+	// dns specific fields
+	if dnsoptions != nil {
+		if dnsoptions.Protocol != "" &&
+			slices.Contains(DnsProtocols, dnsoptions.Protocol) {
+			def.Protocol = dnsoptions.Protocol
+		}
+		if dnsoptions.Class != "" &&
+			slices.Contains(DnsClasses, dnsoptions.Class) {
+			def.Class = dnsoptions.Class
+		}
+		if dnsoptions.Type != "" &&
+			slices.Contains(DnsTypes, dnsoptions.Type) {
+			def.Type = dnsoptions.Type
+		}
+		if dnsoptions.Argument != "" {
+			def.Argument = &dnsoptions.Argument
+		}
+		if dnsoptions.UseMacros {
+			def.UseMacros = &dnsoptions.UseMacros
+		}
+		if dnsoptions.UseResolver {
+			def.UseResolver = &dnsoptions.UseResolver
+		}
+		if dnsoptions.Nsid {
+			def.Nsid = &dnsoptions.Nsid
+		}
+		if dnsoptions.UdpPayloadSize != 0 {
+			def.UdpPayloadSize = &dnsoptions.UdpPayloadSize
+		}
+		if dnsoptions.Retries != 0 {
+			def.Retries = &dnsoptions.Retries
+		}
+		if dnsoptions.IncludeQbuf {
+			def.IncludeQbuf = &dnsoptions.IncludeQbuf
+		}
+		if dnsoptions.IncludeAbuf {
+			def.IncludeAbuf = &dnsoptions.IncludeAbuf
+		}
+		if dnsoptions.PrependProbeID {
+			def.PrependProbeID = &dnsoptions.PrependProbeID
+		}
+		if dnsoptions.SetRd {
+			def.SetRd = &dnsoptions.SetRd
+		}
+		if dnsoptions.SetDo {
+			def.SetDo = &dnsoptions.SetDo
+		}
+		if dnsoptions.SetRd {
+			def.SetCd = &dnsoptions.SetCd
+		}
+		if dnsoptions.Timeout != 0 {
+			def.Timeout = &dnsoptions.Timeout
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
+func (spec *MeasurementSpec) AddTls(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	tlsoptions *TlsOptions,
+) error {
+	var def = new(measurementTargetTls)
+
+	if err := def.addCommonFields("sslcert", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Port = 443
+
+	// TLS specific fields
+	if tlsoptions != nil {
+		if tlsoptions.Port != 0 {
+			def.Port = tlsoptions.Port
+		}
+		if tlsoptions.Sni != "" {
+			def.Sni = &tlsoptions.Sni
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
+func (spec *MeasurementSpec) AddNtp(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	ntpoptions *NtpOptions,
+) error {
+	var def = new(measurementTargetNtp)
+
+	if err := def.addCommonFields("ntp", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+
+	// NTP specific fields
+	if ntpoptions != nil {
+		if ntpoptions.Packets != 0 {
+			def.Packets = &ntpoptions.Packets
+		}
+		if ntpoptions.Timeout != 0 {
+			def.Timeout = &ntpoptions.Timeout
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
+func (spec *MeasurementSpec) AddHttp(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	httpoptions *HttpOptions,
+) error {
+	var def = new(measurementTargetHttp)
+
+	if err := def.addCommonFields("http", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Method = "HEAD"
+
+	// HTTP specific fields
+	if httpoptions != nil {
+		if httpoptions.Method != "" &&
+			slices.Contains(HttpMethods, httpoptions.Method) {
+			def.Method = httpoptions.Method
+		}
+		if httpoptions.Version != "" &&
+			slices.Contains(HttpVersions, httpoptions.Version) {
+			def.Version = &httpoptions.Version
+		}
+		if httpoptions.Path != "" {
+			def.Path = httpoptions.Path
+		}
+		if httpoptions.Query != "" {
+			def.Query = &httpoptions.Query
+		}
+		if httpoptions.Port != 0 {
+			def.Port = &httpoptions.Port
+		}
+		if httpoptions.HeaderBytes != 0 {
+			def.HeaderBytes = &httpoptions.HeaderBytes
+		}
+		if httpoptions.ExtendedTiming {
+			def.ExtendedTiming = &httpoptions.ExtendedTiming
+		}
+		if httpoptions.MoreExtendedTiming {
+			def.MoreExtendedTiming = &httpoptions.MoreExtendedTiming
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
+func (target *measurementTargetPing) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetTrace) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetDns) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetTls) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetNtp) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetHttp) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+
+// ApiKey sets the API key to be used
+// This key should have the required permission (create or stop)
+func (filter *MeasurementSpec) ApiKey(key *uuid.UUID) {
+	filter.key = key
+}
+
+func (spec *MeasurementSpec) Schedule() (msmlist []uint, err error) {
+	post, err := spec.GetApiJson()
+	if err != nil {
+		return nil, err
+	}
+
+	query := apiBaseURL + "measurements/"
+	req, err := http.NewRequest("POST", query, bytes.NewBuffer(post))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", uaString)
+	if spec.key != nil {
+		req.Header.Set("Authorization", "Key "+spec.key.String())
+	}
+
+	if spec.verbose {
+		msg := fmt.Sprintf("# API call: POST %s with content '%s'", req.URL, string(post))
+		if spec.key != nil {
+			msg += fmt.Sprintf(" (using API key %s...)", spec.key.String()[:8])
+		}
+		fmt.Println(msg)
+	}
+
+	client := &http.Client{}
+	client.Timeout = time.Second * 15
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, parseAPIError(resp)
+	}
+
+	if resp.StatusCode == 201 {
+		var msmlist MeasurementList
+		err = json.NewDecoder(resp.Body).Decode(&msmlist)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR while trying to update measurement %d: %v\n", flags.msmremove, err)
-			os.Exit(1)
+			return nil, err
 		}
-		if flagVerbose {
-			fmt.Printf("# Request IDs: %v\n", ids)
-		}
-		fmt.Println("OK")
-		return
-
-	case flags.msmadd != 0:
-		if getApiKey("update_measurements") == nil {
-			fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key update_measurements - please consult the config file\n")
-			os.Exit(1)
-		}
-		spec.ApiKey(getApiKey("update_measurements"))
-		ids, err := spec.ParticipationRequest(flags.msmadd, true)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR while trying to update measurement %d: %v\n", flags.msmadd, err)
-			os.Exit(1)
-		}
-		if flagVerbose {
-			fmt.Printf("# Request IDs: %v\n", ids)
-		}
-		fmt.Println("OK")
-		return
+		return msmlist.Measurements, nil
 	}
 
-	formatter := options["output"].(string)
+	return nil, fmt.Errorf("unknown error")
+}
 
-	if flags.msmaf != 4 && flags.msmaf != 6 {
-		fmt.Fprintf(os.Stderr, "ERROR: invalid address family, it should be 4 or 6\n")
-		os.Exit(1)
+func (spec *MeasurementSpec) GetApiJson() ([]byte, error) {
+	if len(spec.apiSpec.Definitons) == 0 {
+		return nil, fmt.Errorf("need at least 1 measurement defintion")
 	}
 
-	if flags.specOnly {
-		json, err := spec.GetApiJson()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println(string(json))
-		return
+	if len(spec.apiSpec.Probes) == 0 {
+		return nil, fmt.Errorf("need at least 1 probe specification")
 	}
 
-	if !output.Verify(formatter, flagsToOutFormat(flags)) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for '%s'\n", flagsToOutFormat(flags), formatter)
-		os.Exit(1)
-	}
+	return json.Marshal(spec.apiSpec)
+}
 
-	if getApiKey("create_measurements") == nil {
-		fmt.Fprintf(os.Stderr, "ERROR: you need to provide the API key create_measurements - please consult the config file\n")
-		os.Exit(1)
-	}
-	spec.ApiKey(getApiKey("create_measurements"))
-
-	// most of the work is done by goatAPI
-	msmlist, err := spec.Schedule()
+func (spec *MeasurementSpec) Stop(msmID uint) error {
+	query := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, msmID)
+	req, err := http.NewRequest("DELETE", query, nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", uaString)
+	if spec.key != nil {
+		req.Header.Set("Authorization", "Key "+spec.key.String())
 	}
 
-	if flagVerbose {
-		fmt.Println("# Measurement ID:", msmlist[0])
-	} else if !flags.result {
-		fmt.Println(msmlist[0])
+	if spec.verbose {
+		msg := fmt.Sprintf("# API call: DELETE %s ", req.URL)
+		if spec.key != nil {
+			msg += fmt.Sprintf(" (using API key %s...)", spec.key.String()[:8])
+		}
+		fmt.Println(msg)
 	}
 
-	// the measurement is ready - tune into the result stream if the user wanted that
-	if flags.result {
-		// prepare
-		rflags := resultFlags{
-			stream:       true,
-			filterID:     msmlist[0],
-			saveFileName: flags.save,
-			saveAll:      true,
-			output:       flags.output,
-			outopts:      flags.outopts,
-			limit:        0,
-		}
-		if !flags.periodic {
-			rflags.limit = uint(flags.totalProbes)
-		}
-		if flags.msmdns {
-			rflags.outopts.Set("type:" + flags.msmopttype)
-		}
-
-		// most of the work is done by the implementation of the result streaming feature
-		commandResultFromFlags(&rflags)
+	client := &http.Client{}
+	client.Timeout = time.Second * 15
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return parseAPIError(resp)
+	}
+
+	return nil
 }
 
-// Process flags (options), pass most of them on to goatAPI
-// while doing sanity checks on values
-func processMeasureFlags(flags *measureFlags) (
-	spec *goatapi.MeasurementSpec,
-	options map[string]any,
-) {
-	options = make(map[string]any)
-	spec = goatapi.NewMeasurementSpec()
-	spec.Verbose(flagVerbose)
-
-	// process probe sepcification(s)
-	var probetaginc, probetagexc []string
-	if flags.probetaginc != "" {
-		probetaginc = strings.Split(flags.probetaginc, ",")
+// ParticipationRequest is used to add or remove probes to/from existing measurement
+// the actual probe specification on what to add or remove comes
+// in the form of measurementProbeDefinition objects in the specification
+func (spec *MeasurementSpec) ParticipationRequest(msmID uint, add bool) ([]uint, error) {
+	type measurementParticipationRequest struct {
+		Action    string    `json:"action"` // "add" or "remove"
+		Requested uint      `json:"requested"`
+		Type      string    `json:"type"`
+		Value     string    `json:"value"`
+		Include   *[]string `json:"include,omitempty"`
+		Exclude   *[]string `json:"exclude,omitempty"`
 	}
-	if flags.probetagexc != "" {
-		probetagexc = strings.Split(flags.probetagexc, ",")
+	type measurementParticipationResponse struct {
+		RequestIds []uint `json:"request_ids"`
 	}
-
-	// apply defaults from the config file if nothing was specified
-	if flags.probecc == "" &&
-		flags.probearea == "" &&
-		flags.probeasn == "" &&
-		flags.probeprefix == "" &&
-		flags.probereuse == "" &&
-		flags.probelist == "" {
-
-		if flags.probecc == "" {
-			flags.probecc = getProbeSpecDefault("cc")
-		}
-		if flags.probearea == "" {
-			flags.probearea = getProbeSpecDefault("area")
-		}
-		if flags.probeasn == "" {
-			flags.probeasn = getProbeSpecDefault("asn")
-		}
-		if flags.probeprefix == "" {
-			flags.probeprefix = getProbeSpecDefault("prefix")
-		}
-		if flags.probereuse == "" {
-			flags.probereuse = getProbeSpecDefault("reuse")
-		}
-		if flags.probelist == "" {
-			flags.probelist = getProbeSpecDefault("list")
-		}
-
-		// last resort: add 10 probes world wide
-		if flags.probecc == "" &&
-			flags.probearea == "" &&
-			flags.probeasn == "" &&
-			flags.probeprefix == "" &&
-			flags.probereuse == "" &&
-			flags.probelist == "" {
-			parseProbeSpec("area", "10@ww", spec, &probetaginc, &probetagexc, &flags.totalProbes)
-		}
+	if len(spec.apiSpec.Probes) == 0 {
+		return nil, fmt.Errorf("need at least 1 probe specification")
 	}
 
-	// parse probe specifications
-	parseProbeSpec("cc", flags.probecc, spec, &probetaginc, &probetagexc, &flags.totalProbes)
-	parseProbeSpec("area", flags.probearea, spec, &probetaginc, &probetagexc, &flags.totalProbes)
-	parseProbeSpec("asn", flags.probeasn, spec, &probetaginc, &probetagexc, &flags.totalProbes)
-	parseProbeSpec("prefix", flags.probeprefix, spec, &probetaginc, &probetagexc, &flags.totalProbes)
-	parseProbeSpec("reuse", flags.probereuse, spec, &probetaginc, &probetagexc, &flags.totalProbes)
-	parseProbeListSpec(flags.probelist, spec, &probetaginc, &probetagexc, &flags.totalProbes)
-
-	// process timing
-	spec.OneOff(!flags.periodic)
-	parseStartStop(spec, !flags.periodic, flags.starttime, flags.endtime)
-
-	// process measurement specification
-	parseMeasurementPing(flags, spec)
-	parseMeasurementTraceroute(flags, spec)
-	parseMeasurementDns(flags, spec)
-	parseMeasurementTls(flags, spec)
-	parseMeasurementHttp(flags, spec)
-	parseMeasurementNtp(flags, spec)
-
-	// options
-	options["output"] = flags.output
-
-	return
-}
-
-// Define and parse command line args for this subcommand using the flags package
-func parseMeasureArgs(args []string) *measureFlags {
-	var flags measureFlags
-
-	// special cases: stop a meeasurement, add or remove probes
-	flagsMeasure.UintVar(&flags.msmstop, "stop", 0, "Stop a particular measurement")
-	flagsMeasure.UintVar(&flags.msmadd, "add", 0, "Add probes to a particular measurement")
-	flagsMeasure.UintVar(&flags.msmremove, "remove", 0, "Remove probes from a particular measurement")
-
-	// generic flags
-	flagsMeasure.BoolVar(&flags.specOnly, "json", false, "Output the specification only, don't schedule the measurement")
-	flagsMeasure.BoolVar(&flags.result, "result", false, "Immediately tune in to the result stream. By default true for one-offs, false for periodic ones.")
-	flagsMeasure.BoolVar(&flags.noresult, "noresult", false, "Don't tune in to the result stream, even for a one-off.")
-
-	// probe selection
-	flagsMeasure.StringVar(&flags.probetaginc, "probetaginc", "", "Probe tags to include (comma separated list)")
-	flagsMeasure.StringVar(&flags.probetagexc, "probetagexc", "", "Probe tags to exclude (comma separated list)")
-	flagsMeasure.StringVar(&flags.probecc, "probecc", "", "Probes to select from country (comma separated list of amount@CC)")
-	flagsMeasure.StringVar(&flags.probearea, "probearea", "", "Probes to select from area (comma separated list of amount@area, area can be ww/west/nc/sc/ne/se)")
-	flagsMeasure.StringVar(&flags.probeasn, "probeasn", "", "Probes to select from an ASN (comma separated list of amount@ASN)")
-	flagsMeasure.StringVar(&flags.probeprefix, "probeprefix", "", "Probes to select from a prefix (comma separated list of amount@prefix)")
-	flagsMeasure.StringVar(&flags.probelist, "probelist", "", "Probes to use provided as a comma separated list")
-	flagsMeasure.StringVar(&flags.probereuse, "probereuse", "", "Probes to reuse from a previous measurement as amount@msmID")
-
-	// timing
-	flagsMeasure.BoolVar(&flags.periodic, "periodic", false, "Schedule a periodic measurement instead of a one-off")
-	flagsMeasure.StringVar(&flags.starttime, "start", "", "When to start this measurement")
-	flagsMeasure.StringVar(&flags.endtime, "end", "", "When to end this measurement (if it's ongoing)")
-
-	// measurement types
-	flagsMeasure.BoolVar(&flags.msmping, "ping", false, "Schedule a ping measurement")
-	flagsMeasure.BoolVar(&flags.msmtrace, "trace", false, "Schedule a traceroute measurement")
-	flagsMeasure.BoolVar(&flags.msmdns, "dns", false, "Schedule a DNS measurement")
-	flagsMeasure.BoolVar(&flags.msmtls, "tls", false, "Schedule a TLS measurement")
-	flagsMeasure.BoolVar(&flags.msmhttp, "http", false, "Schedule a HTTP measurement")
-	flagsMeasure.BoolVar(&flags.msmntp, "ntp", false, "Schedule a NTP measurement")
-
-	// measurement common flags
-	flagsMeasure.UintVar(&flags.msmaf, "af", 4, "Address family: 4 for IPv4 or 6 for IPv6")
-	flagsMeasure.StringVar(&flags.msmtarget, "target", "", "Target of the measurement")
-	flagsMeasure.BoolVar(&flags.msmresolveonprobe, "resolveonprobe", true, "The probe should do the DNS resolution")
-	flagsMeasure.BoolVar(&flags.msmskipdnscheck, "skipdnscheck", false, "Skip DNS check upon creation")
-	flagsMeasure.UintVar(&flags.msminterval, "interval", 0, "Interval for an ongoing measurement")
-	flagsMeasure.UintVar(&flags.msmspread, "spread", 0, "Spread for an ongoing measurement")
-	flagsMeasure.StringVar(&flags.msmtags, "tags", "", "Tags for a measurement")
-
-	// measurement type specific options
-	flagsMeasure.UintVar(&flags.msmoptparis, "paris", 16, "TRACE: paris ID")
-	flagsMeasure.StringVar(&flags.msmoptprotocol, "proto", "UDP", "TRACE, DNS: protocol to use (UDP, TCP, ICMP or UDP, TCP)")
-	flagsMeasure.UintVar(&flags.msmoptminhop, "minhop", 1, "TRACE: first hop")
-	flagsMeasure.UintVar(&flags.msmoptmaxhop, "maxhop", 32, "TRACE: last hop")
-	flagsMeasure.StringVar(&flags.msmoptname, "name", "", "DNS: name to look up")
-	flagsMeasure.BoolVar(&flags.msmoptnsid, "nsid", false, "DNS: ask for NSID")
-	flagsMeasure.BoolVar(&flags.msmoptqbuf, "qbuf", false, "DNS: ask for qbuf")
-	flagsMeasure.BoolVar(&flags.msmoptabuf, "abuf", false, "DNS: ask for abuf")
-	flagsMeasure.BoolVar(&flags.msmoptrd, "rd", false, "DNS: set RD bit")
-	flagsMeasure.BoolVar(&flags.msmoptdo, "do", false, "DNS: set DO bit")
-	flagsMeasure.BoolVar(&flags.msmoptcd, "cd", false, "DNS: set CD bit")
-	flagsMeasure.UintVar(&flags.msmoptretry, "retry", 0, "DNS: retry count")
-	flagsMeasure.StringVar(&flags.msmoptclass, "class", "IN", "DNS: query class (IN, CHAOS)")
-	flagsMeasure.StringVar(&flags.msmopttype, "type", "A", "DNS: query type (A, AAAA, NS, CNAME, ...)")
-	flagsMeasure.StringVar(&flags.msmoptmethod, "method", "HEAD", "HTTP: method to use (HEAD, GET, POST)")
-	flagsMeasure.UintVar(&flags.msmoptport, "port", 0, "TLS: port number")
-	flagsMeasure.StringVar(&flags.msmoptsni, "sni", "", "TLS: SNI to use. Defaults to target name")
-	flagsMeasure.StringVar(&flags.msmoptversion, "version", "1.0", "HTTP: version to use (1.0, 1.1)")
-	flagsMeasure.BoolVar(&flags.msmopttiming1, "time1", false, "HTTP: extended timing")
-	flagsMeasure.BoolVar(&flags.msmopttiming2, "time2", false, "HTTP: more extended timing")
-
-	// options
-	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
-	flagsMeasure.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
-	flagsMeasure.StringVar(&flags.save, "save", "", "Save results to this file")
-
-	flagsMeasure.Parse(args)
-
-	// force uppercase for some
-	flags.msmoptclass = strings.ToUpper(flags.msmoptclass)
-	flags.msmopttype = strings.ToUpper(flags.msmopttype)
-	flags.msmoptmethod = strings.ToUpper(flags.msmoptmethod)
-	flags.msmoptprotocol = strings.ToUpper(flags.msmoptprotocol)
-
-	// one cannot have and not have results at the same time
-	if flags.result && flags.noresult {
-		fmt.Fprintf(os.Stderr, "ERROR: please decide if you want result streaming or not\n")
-		os.Exit(1)
-	}
-	// for one-offs turn on result streaming unless it's explicity not wanted
-	if !flags.periodic && !flags.noresult {
-		flags.result = true
-	}
-	// for periodics only turn result streaming if it's explicitly wanted
-	if flags.periodic && flags.result {
-		flags.result = true
-	}
-
-	return &flags
-}
-
-// parse probe spec as a list of amount@spec
-func parseProbeSpec(
-	spectype string,
-	from string,
-	spec *goatapi.MeasurementSpec,
-	probetaginc, probetagexc *[]string,
-	totalProbes *int,
-) {
-	if from == "" {
-		return
-	}
-
-	list := strings.Split(from, ",")
-	for _, item := range list {
-		split := strings.Split(item, "@")
-		if len(split) != 2 {
-			fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe %s spec: '%s'\n", spectype, item)
-			os.Exit(1)
-		}
-		n := 0
-		var err error
-		if split[1] == "all" {
-			n = -1
-		} else {
-			n, err = strconv.Atoi(split[0])
-			if err != nil || n <= 0 {
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe %s amount: '%s'\n", spectype, split[0])
-				os.Exit(1)
+	plist := make([]measurementParticipationRequest, 0)
+	for _, pspec := range spec.apiSpec.Probes {
+		action := "add"
+		if !add {
+			action = "remove"
+			if pspec.Type != "probes" {
+				return nil, fmt.Errorf("probe removal only accepts an explicit probe list")
 			}
 		}
-		switch spectype {
-		case "cc":
-			if len(split[1]) != 2 { // TODO: proper CC validation
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe CC spec: invalid CC (in %s)\n", split[1])
-				os.Exit(1)
-			}
-			spec.AddProbesCountryWithTags(split[1], n, probetaginc, probetagexc)
-		case "asn":
-			specval, err := strconv.Atoi(split[1])
-			if err != nil || specval <= 0 {
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe ASN spec: '%s'\n", split[1])
-				os.Exit(1)
-			}
-			spec.AddProbesAsnWithTags(uint(specval), n, probetaginc, probetagexc)
-		case "prefix":
-			prefix, err := netip.ParsePrefix(split[1])
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe prefix spec: '%s'\n", split[1])
-				os.Exit(1)
-			}
-			spec.AddProbesPrefixWithTags(prefix, n, probetaginc, probetagexc)
-		case "reuse":
-			msmid, err := strconv.Atoi(split[1])
-			if err != nil || msmid <= 1000000 {
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe reuse measurement ID: '%s'\n", split[1])
-				os.Exit(1)
-			}
-			spec.AddProbesReuseWithTags(uint(msmid), n, probetaginc, probetagexc)
-		case "area":
-			var areas map[string]string = map[string]string{
-				"ww":   "WW",
-				"west": "West",
-				"nc":   "North-Central",
-				"sc":   "South-Central",
-				"ne":   "North-East",
-				"se":   "South-East",
-			}
-			area, ok := areas[split[1]]
-			if !ok {
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe area spec: unknown area '%s'\n", split[1])
-				os.Exit(1)
-			}
-			spec.AddProbesAreaWithTags(area, n, probetaginc, probetagexc)
+		mpr := measurementParticipationRequest{
+			Action:    action,
+			Requested: uint(pspec.Requested),
+			Type:      pspec.Type,
+			Value:     pspec.Value,
 		}
-		*totalProbes += n
-	}
-}
-
-// parse probe list spec as a list of probe IDs
-func parseProbeListSpec(
-	from string,
-	spec *goatapi.MeasurementSpec,
-	probetaginc, probetagexc *[]string,
-	totalProbes *int,
-) {
-	if from == "" {
-		return
-	}
-
-	list := make([]uint, 0)
-	plist := strings.Split(from, ",")
-	for _, pid := range plist {
-		n, err := strconv.Atoi(pid)
-		if err != nil || n <= 0 {
-			fmt.Fprintf(os.Stderr, "ERROR: invalid probe ID %s\n", pid)
-			os.Exit(1)
+		if pspec.Tags != nil {
+			mpr.Include = pspec.Tags.Include
+			mpr.Exclude = pspec.Tags.Exclude
 		}
-		list = append(list, uint(n))
-	}
-	spec.AddProbesListWithTags(list, probetaginc, probetagexc)
-	*totalProbes += len(list)
-}
-
-func parseStartStop(
-	spec *goatapi.MeasurementSpec,
-	oneoff bool,
-	start string,
-	end string,
-) {
-	starttime, starterr := parseTimeAlternatives(start)
-	endtime, enderr := parseTimeAlternatives(end)
-
-	if oneoff && enderr == nil {
-		fmt.Fprintf(os.Stderr, "ERROR: one-offs cannot have a stop time\n")
-		os.Exit(1)
-	}
-	if starterr == nil && starttime.Unix() <= time.Now().Unix() {
-		fmt.Fprintf(os.Stderr, "ERROR: start time cannot be in the past\n")
-		os.Exit(1)
-	}
-	if enderr == nil && endtime.Unix() <= time.Now().Unix() {
-		fmt.Fprintf(os.Stderr, "ERROR: stop time cannot be in the past\n")
-		os.Exit(1)
-	}
-	if starterr == nil && enderr == nil && starttime.Unix() >= endtime.Unix() {
-		fmt.Fprintf(os.Stderr, "ERROR: start time has to be before stop time\n")
-		os.Exit(1)
+		plist = append(plist, mpr)
 	}
 
-	if starterr == nil {
-		spec.StartTime(starttime)
-	}
-	if enderr == nil {
-		spec.EndTime(endtime)
-	}
-}
-
-func processBaseOptions(flags *measureFlags) *goatapi.BaseOptions {
-	opts := goatapi.BaseOptions{}
-	if flags.msminterval != 0 {
-		opts.Interval = flags.msminterval
-	}
-	if flags.msmspread != 0 {
-		opts.Spread = flags.msmspread
-	}
-	opts.ResolveOnProbe = flags.msmresolveonprobe
-	opts.SkipDNSCheck = flags.msmskipdnscheck
-	if flags.msmtags != "" {
-		opts.Tags = strings.Split(flags.msmtags, ",")
-	}
-	return &opts
-}
-
-func parseMeasurementPing(
-	flags *measureFlags,
-	spec *goatapi.MeasurementSpec,
-) {
-	if !flags.msmping {
-		return
-	}
-
-	if flags.msmtarget == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
-		os.Exit(1)
-	}
-
-	descr := flags.msmdescr
-	if descr == "" {
-		descr = fmt.Sprintf("Ping measurement to %s", flags.msmtarget)
-	}
-
-	baseopts := processBaseOptions(flags)
-	err := spec.AddPing(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
+	query := fmt.Sprintf("%smeasurements/%d/participation-requests/", apiBaseURL, msmID)
+	post, err := json.Marshal(plist)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func parseMeasurementTraceroute(
-	flags *measureFlags,
-	spec *goatapi.MeasurementSpec,
-) {
-	if !flags.msmtrace {
-		return
+		return nil, err
 	}
 
-	if flags.msmtarget == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
-		os.Exit(1)
-	}
-
-	descr := flags.msmdescr
-	if descr == "" {
-		descr = fmt.Sprintf("Traceroute measurement to %s", flags.msmtarget)
-	}
-	baseopts := processBaseOptions(flags)
-	traceopts := goatapi.TraceOptions{}
-	if flags.msmoptparis != 16 {
-		traceopts.ParisId = flags.msmoptparis
-	}
-	if flags.msmoptprotocol != "UDP" {
-		if !slices.Contains(traceprotocols, flags.msmoptprotocol) {
-			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported TRACE protocol: '%s'\n", flags.msmoptprotocol)
-			os.Exit(1)
-		}
-		traceopts.Protocol = flags.msmoptprotocol
-	}
-	if flags.msmoptminhop == 0 ||
-		flags.msmoptminhop > 128 ||
-		flags.msmoptmaxhop == 0 ||
-		flags.msmoptmaxhop > 128 {
-		fmt.Fprintf(os.Stderr, "ERROR: minhop and maxhop should be between 1 and 128\n")
-		os.Exit(1)
-	}
-	if flags.msmoptminhop > flags.msmoptmaxhop {
-		fmt.Fprintf(os.Stderr, "ERROR: minhop should not be more than maxhop\n")
-		os.Exit(1)
-	}
-	if flags.msmoptminhop != 1 {
-		traceopts.FirstHop = flags.msmoptminhop
-	}
-	if flags.msmoptmaxhop != 32 {
-		traceopts.LastHop = flags.msmoptmaxhop
-	}
-	err := spec.AddTrace(descr, flags.msmtarget, flags.msmaf, baseopts, &traceopts)
+	req, err := http.NewRequest("POST", query, bytes.NewBuffer(post))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-}
-
-func parseMeasurementDns(
-	flags *measureFlags,
-	spec *goatapi.MeasurementSpec,
-) {
-	if !flags.msmdns {
-		return
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", uaString)
+	if spec.key != nil {
+		req.Header.Set("Authorization", "Key "+spec.key.String())
 	}
 
-	if flags.msmoptname == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: a name to be looked up should be specified\n")
-		os.Exit(1)
+	if spec.verbose {
+		msg := fmt.Sprintf("# API call: POST %s with content '%s'", req.URL, string(post))
+		if spec.key != nil {
+			msg += fmt.Sprintf(" (using API key %s...)", spec.key.String()[:8])
+		}
+		fmt.Println(msg)
 	}
 
-	descr := flags.msmdescr
-	if descr == "" {
-		descr = fmt.Sprintf("DNS lookup of %s", flags.msmoptname)
-		if flags.msmtarget != "" {
-			descr += " @" + flags.msmtarget
-		}
-	}
-	baseopts := processBaseOptions(flags)
-	baseopts.ResolveOnProbe = false
-	dnsopts := goatapi.DnsOptions{}
-	dnsopts.Argument = flags.msmoptname
-	dnsopts.UseResolver = flags.msmtarget == ""
-	dnsopts.Nsid = flags.msmoptnsid
-
-	dnsopts.IncludeQbuf = flags.msmoptqbuf
-	dnsopts.IncludeAbuf = flags.msmoptabuf
-	dnsopts.SetRd = flags.msmoptrd
-	dnsopts.SetDo = flags.msmoptdo
-	dnsopts.SetCd = flags.msmoptcd
-	if flags.msmoptprotocol != "UDP" {
-		if !slices.Contains(dnsprotocols, flags.msmoptprotocol) {
-			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported DNS protocol: '%s'\n", flags.msmoptprotocol)
-			os.Exit(1)
-		}
-		dnsopts.Protocol = flags.msmoptprotocol
-	}
-	if flags.msmoptclass != "IN" {
-		if !slices.Contains(dnsclasses, flags.msmoptclass) {
-			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported DNS class: '%s'\n", flags.msmoptclass)
-			os.Exit(1)
-		}
-		dnsopts.Class = flags.msmoptclass
-	}
-	if flags.msmopttype != "A" {
-		if !slices.Contains(dnstypes, flags.msmopttype) {
-			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported DNS class: '%s'\n", flags.msmopttype)
-			os.Exit(1)
-		}
-		dnsopts.Type = flags.msmopttype
-	}
-	dnsopts.UseMacros = strings.Contains(flags.msmoptname, "$")
-	if flags.msmoptretry != 0 {
-		dnsopts.Retries = flags.msmoptretry
-	}
-	err := spec.AddDns(descr, flags.msmtarget, flags.msmaf, baseopts, &dnsopts)
+	client := &http.Client{}
+	client.Timeout = time.Second * 15
+	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-}
+	defer resp.Body.Close()
 
-func parseMeasurementTls(
-	flags *measureFlags,
-	spec *goatapi.MeasurementSpec,
-) {
-	if !flags.msmtls {
-		return
+	if resp.StatusCode >= 400 {
+		return nil, parseAPIError(resp)
 	}
 
-	if flags.msmtarget == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
-		os.Exit(1)
-	}
-
-	descr := flags.msmdescr
-	if descr == "" {
-		descr = fmt.Sprintf("TLS measurement to %s", flags.msmtarget)
-	}
-	baseopts := processBaseOptions(flags)
-	tlsopts := goatapi.TlsOptions{}
-	if flags.msmoptport != 0 {
-		tlsopts.Port = flags.msmoptport
-	}
-	if flags.msmoptsni == "" {
-		tlsopts.Sni = flags.msmtarget
-	} else {
-		tlsopts.Sni = flags.msmoptsni
-	}
-	err := spec.AddTls(descr, flags.msmtarget, flags.msmaf, baseopts, &tlsopts)
+	var ids measurementParticipationResponse
+	err = json.NewDecoder(resp.Body).Decode(&ids)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-}
-
-func parseMeasurementHttp(
-	flags *measureFlags,
-	spec *goatapi.MeasurementSpec,
-) {
-	if !flags.msmhttp {
-		return
-	}
-
-	if flags.msmtarget == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
-		os.Exit(1)
-	}
-
-	target, http := strings.CutPrefix(flags.msmtarget, "http://")
-	if !http {
-		fmt.Fprintf(os.Stderr, "ERROR: a target should start with http://\n")
-		os.Exit(1)
-	}
-	server, path, _ := strings.Cut(target, "/")
-	path, args, _ := strings.Cut("/"+path, "?")
-
-	descr := flags.msmdescr
-	if descr == "" {
-		descr = fmt.Sprintf("HTTP measurement to %s", server)
-	}
-	baseopts := processBaseOptions(flags)
-	httpopts := goatapi.HttpOptions{}
-	httpopts.Path = path
-	httpopts.Query = args
-	if flags.msmoptmethod != "" {
-		if !slices.Contains(httpmethods, flags.msmoptmethod) {
-			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported HTTP method: '%s'\n", flags.msmoptmethod)
-			os.Exit(1)
-		}
-		httpopts.Method = flags.msmoptmethod
-	}
-	if flags.msmoptversion != "1.0" {
-		if !slices.Contains(httpversions, flags.msmoptversion) {
-			fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported HTTP version: '%s'\n", flags.msmoptversion)
-			os.Exit(1)
-		}
-		httpopts.Version = flags.msmoptversion
-	}
-	if flags.msmoptport != 0 {
-		httpopts.Port = flags.msmoptport
-	}
-	httpopts.ExtendedTiming = flags.msmopttiming1
-	httpopts.MoreExtendedTiming = flags.msmopttiming2
-	err := spec.AddHttp(descr, server, flags.msmaf, baseopts, &httpopts)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func parseMeasurementNtp(
-	flags *measureFlags,
-	spec *goatapi.MeasurementSpec,
-) {
-	if !flags.msmntp {
-		return
-	}
-
-	if flags.msmtarget == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: a target should be specified\n")
-		os.Exit(1)
-	}
-
-	descr := flags.msmdescr
-	if descr == "" {
-		descr = fmt.Sprintf("NTP measurement to %s", flags.msmtarget)
-	}
-	baseopts := processBaseOptions(flags)
-	err := spec.AddNtp(descr, flags.msmtarget, flags.msmaf, baseopts, nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func flagsToOutFormat(flags *measureFlags) string {
-	switch {
-	case flags.msmdns:
-		return "dns"
-	case flags.msmhttp:
-		return "http"
-	case flags.msmping:
-		return "ping"
-	case flags.msmntp:
-		return "ntp"
-	case flags.msmtls:
-		return "tls"
-	case flags.msmtrace:
-		return "trace"
-	default:
-		return ""
-	}
-
+	return ids.RequestIds, nil
 }
