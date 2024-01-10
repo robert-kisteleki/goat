@@ -65,7 +65,9 @@ func (cert *CertResult) Parse(from string) (err error) {
 			cert.ConnectTime = *icert.ConnectTime
 			// if there's an alert, there's no other real data
 			if icert.Alert == nil {
-				cert.ServerCipher = *icert.ServerCipher
+				if icert.ServerCipher != nil {
+					cert.ServerCipher = *icert.ServerCipher
+				}
 				cert.ProtocolVersion = *icert.ProtocolVersion
 				cert.Certificates, err = icert.Certificates()
 				if err != nil {
