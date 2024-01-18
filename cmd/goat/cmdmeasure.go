@@ -27,6 +27,7 @@ type measureFlags struct {
 	save     string
 	result   bool
 	noresult bool
+	timeout  uint
 
 	// probe options
 	probetaginc string
@@ -215,6 +216,7 @@ func commandMeasure(args []string) {
 			output:       flags.output,
 			outopts:      flags.outopts,
 			limit:        0,
+			timeout:      flags.timeout,
 		}
 		if !flags.periodic {
 			rflags.limit = uint(flags.totalProbes)
@@ -383,6 +385,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
 	flagsMeasure.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 	flagsMeasure.StringVar(&flags.save, "save", "", "Save results to this file")
+	flagsMeasure.UintVar(&flags.timeout, "timeout", 60, "Timeout in seconds for result streaming")
 
 	flagsMeasure.Parse(args)
 

@@ -35,6 +35,7 @@ type ResultsFilter struct {
 	typehint string
 	saveFile *os.File // save results to this file (if not nil)
 	saveAll  bool
+	timeout  time.Duration
 }
 
 // NewResultsFilter prepares a new result filter object
@@ -43,6 +44,7 @@ func NewResultsFilter() ResultsFilter {
 	filter.params = url.Values{}
 	filter.params.Add("format", "txt")
 	filter.probes = make([]uint, 0)
+	filter.timeout = time.Second * 60
 	return filter
 }
 
@@ -102,6 +104,11 @@ func (filter *ResultsFilter) SaveAll(all bool) {
 // Stream switches between using the streaming or the data API
 func (filter *ResultsFilter) Stream(useStream bool) {
 	filter.stream = useStream
+}
+
+// StreamTimeout sets the timeout for the websocket stream
+func (filter *ResultsFilter) StreamTimeout(timeout time.Duration) {
+	filter.timeout = timeout
 }
 
 // Limit limits the number of result retrieved
@@ -172,8 +179,12 @@ func (filter *ResultsFilter) streamResults(
 		return
 	}
 
+	if filter.timeout != 0 {
+		conn.SetReadDeadline(time.Now().Add(filter.timeout))
+	}
+
 	// handle the resuts coming form the websocket
-	go filter.streamReceiveHandler(verbose, conn, results)
+	go filter.streamReceiveHandler(verbose, filter.timeout, conn, results)
 
 	// using types and marshaling may be overkill - but it's flexible
 	subscription := make([]any, 2)
@@ -233,6 +244,7 @@ func (filter *ResultsFilter) readResults(
 
 func (filter *ResultsFilter) streamReceiveHandler(
 	verbose bool,
+	timeout time.Duration,
 	connection *websocket.Conn,
 	results chan result.AsyncResult,
 ) {
@@ -242,9 +254,13 @@ func (filter *ResultsFilter) streamReceiveHandler(
 	for {
 		_, msg, err := connection.ReadMessage()
 		if err != nil {
-			err := fmt.Errorf("error reading from stream: %v", err)
+			err := fmt.Errorf("disconnected")
 			results <- result.AsyncResult{Result: nil, Error: err}
 			return
+		}
+
+		if filter.timeout != 0 {
+			connection.SetReadDeadline(time.Now().Add(filter.timeout))
 		}
 
 		// instead of parsing the full message as JSON, we make a shortcut
