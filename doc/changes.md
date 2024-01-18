@@ -1,5 +1,10 @@
 # goat changelog
 
+## v0.7.1
+
+* FIX: (TLS) server cipher may be missing even if there is no alert
+* CHANGED: added `-timeout` parameter to result streaming
+
 ## v0.7.0
 
 * CHANGED: merged *goatAPI* and *goatCLI* into one package *goat* with goatCLI as a command (simply named *goat*)
