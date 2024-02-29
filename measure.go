@@ -295,7 +295,7 @@ func (spec *MeasurementSpec) AddProbesCountryWithTags(cc string, n int, tagsincl
 	if len(cc) != 2 { // TODO: add proper country code validation
 		return fmt.Errorf("invalid country code %v", cc)
 	}
-	return spec.addProbeSet("cc", cc, n, tagsincl, tagsexcl)
+	return spec.addProbeSet("country", cc, n, tagsincl, tagsexcl)
 }
 
 func (spec *MeasurementSpec) AddProbesListWithTags(list []uint, tagsincl *[]string, tagsexcl *[]string) error {
