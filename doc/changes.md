@@ -1,5 +1,9 @@
 # goat changelog
 
+## next
+
+* FIX: measurement spec uses "country" not "cc" as probe country code filter
+
 ## v0.7.1
 
 * FIX: (TLS) server cipher may be missing even if there is no alert
