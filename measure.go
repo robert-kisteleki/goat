@@ -277,7 +277,7 @@ func (spec *MeasurementSpec) AddProbesReuse(msm uint, n int) error {
 }
 
 func (spec *MeasurementSpec) AddProbesAsn(asn uint, n int) error {
-	return spec.AddProbesReuseWithTags(asn, n, nil, nil)
+	return spec.AddProbesAsnWithTags(asn, n, nil, nil)
 }
 
 func (spec *MeasurementSpec) AddProbesPrefix(prefix netip.Prefix, n int) error {
@@ -669,6 +669,10 @@ func (target *measurementTargetNtp) MarshalJSON() (b []byte, e error) {
 }
 func (target *measurementTargetHttp) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
+}
+
+func (probes *measurementProbeDefinition) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*probes)
 }
 
 // ApiKey sets the API key to be used

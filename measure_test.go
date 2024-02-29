@@ -7,12 +7,13 @@
 package goat
 
 import (
+	"net/netip"
 	"reflect"
 	"testing"
 )
 
 // Test if the measurement probe spec part works
-func TestMeasureProbes(t *testing.T) {
+func TestMeasureProbeArea(t *testing.T) {
 	var err error
 	var spec MeasurementSpec
 
@@ -29,6 +30,18 @@ func TestMeasureProbes(t *testing.T) {
 			t.Errorf("Valid probe area %s is not accepted: %v", area, err)
 		}
 	}
+	b, err := spec.apiSpec.Probes[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Probe area spec failed to marshal to JSON: %v", err)
+	}
+	if string(b) != `{"type":"area","value":"South-East","requested":5}` {
+		t.Errorf("Probe area spec improperly serialized: %s", string(b))
+	}
+}
+
+func TestMeasureProbeCountry(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
 
 	spec = MeasurementSpec{}
 	err = spec.AddProbesCountry("NED", 5)
@@ -41,6 +54,52 @@ func TestMeasureProbes(t *testing.T) {
 	if err != nil {
 		t.Errorf("Valid country is not accepted: %v", err)
 	}
+	b, err := spec.apiSpec.Probes[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Probe country spec failed to marshal to JSON: %v", err)
+	}
+	if string(b) != `{"type":"country","value":"NL","requested":5}` {
+		t.Errorf("Probe country spec improperly serialized: %s", string(b))
+	}
+}
+
+func TestMeasureProbePrefix(t *testing.T) {
+	var err error
+
+	spec := MeasurementSpec{}
+	err = spec.AddProbesPrefix(netip.MustParsePrefix("10.0.0.0/24"), 5)
+	if err != nil {
+		t.Errorf("Good probe prefix is not accepted: %v", err)
+	}
+	b, err := spec.apiSpec.Probes[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Probe prefix spec failed to marshal to JSON: %v", err)
+	}
+	if string(b) != `{"type":"prefix","value":"10.0.0.0/24","requested":5}` {
+		t.Errorf("Probe prefix spec improperly serialized: %s", string(b))
+	}
+}
+
+func TestMeasureProbeAsn(t *testing.T) {
+	var err error
+
+	spec := MeasurementSpec{}
+	err = spec.AddProbesAsn(1234, 5)
+	if err != nil {
+		t.Errorf("Good probe ASN is not accepted: %v", err)
+	}
+	b, err := spec.apiSpec.Probes[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Probe ASN spec failed to marshal to JSON: %v", err)
+	}
+	if string(b) != `{"type":"asn","value":"1234","requested":5}` {
+		t.Errorf("Probe ASN spec improperly serialized: %s", string(b))
+	}
+}
+
+func TestMeasureProbeList(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
 
 	spec = MeasurementSpec{}
 	err = spec.AddProbesList([]uint{})
@@ -53,6 +112,18 @@ func TestMeasureProbes(t *testing.T) {
 	if err != nil {
 		t.Errorf("Good probe list is not accepted: %v", err)
 	}
+	b, err := spec.apiSpec.Probes[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Probe list spec failed to marshal to JSON: %v", err)
+	}
+	if string(b) != `{"type":"probes","value":"1,2,3","requested":3}` {
+		t.Errorf("Probe list spec improperly serialized: %s", string(b))
+	}
+}
+
+func TestMeasureProbeReuse(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
 
 	spec = MeasurementSpec{}
 	err = spec.AddProbesReuse(10, 5)
@@ -65,14 +136,19 @@ func TestMeasureProbes(t *testing.T) {
 	if err != nil {
 		t.Errorf("Good msm reuse ID is not accepted: %v", err)
 	}
-
-	spec = MeasurementSpec{}
-	err = spec.AddProbesReuse(10, 5)
-	if err == nil {
-		t.Errorf("Bad msm reuse ID is accepted")
+	b, err := spec.apiSpec.Probes[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Probe reuse spec failed to marshal to JSON: %v", err)
 	}
+	if string(b) != `{"type":"msm","value":"1000001","requested":5}` {
+		t.Errorf("Probe reuse spec improperly serialized: %s", string(b))
+	}
+}
 
-	spec = MeasurementSpec{}
+func TestMeasureProbeTags(t *testing.T) {
+	var err error
+
+	spec := MeasurementSpec{}
 	err = spec.AddProbesReuseWithTags(1000001, 5, &[]string{"itag1", "itag2"}, &[]string{"etag1", "etag2"})
 	if err != nil {
 		t.Errorf("Good probe tag filter list is not accepted: %v", err)
