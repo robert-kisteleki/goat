@@ -184,7 +184,7 @@ func (filter *ResultsFilter) streamResults(
 	}
 
 	// handle the resuts coming form the websocket
-	go filter.streamReceiveHandler(verbose, filter.timeout, conn, results)
+	go filter.streamReceiveHandler(verbose, conn, results)
 
 	// using types and marshaling may be overkill - but it's flexible
 	subscription := make([]any, 2)
@@ -244,7 +244,6 @@ func (filter *ResultsFilter) readResults(
 
 func (filter *ResultsFilter) streamReceiveHandler(
 	verbose bool,
-	timeout time.Duration,
 	connection *websocket.Conn,
 	results chan result.AsyncResult,
 ) {
