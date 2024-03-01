@@ -1,6 +1,6 @@
 # goat changelog
 
-## next
+## v0.7.2
 
 * FIX: measurement spec uses "country" not "cc" as probe country code filter
 * FIX: measurement spec probe ASN filter was incorrect when tags were not used
