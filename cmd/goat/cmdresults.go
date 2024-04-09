@@ -138,21 +138,27 @@ func processResultFlags(flags *resultFlags) (
 	}
 
 	if flags.filterStart != "" {
-		time, err := parseTimeAlternatives(flags.filterStart)
+		t, err := parseTimeAlternatives(flags.filterStart)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: could not parse start time (%v)\n", err)
 			os.Exit(1)
 		}
-		filter.FilterStart(time)
+		filter.FilterStart(t)
 	}
 
 	if flags.filterStop != "" {
-		time, err := parseTimeAlternatives(flags.filterStop)
+		t, err := parseTimeAlternatives(flags.filterStop)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: could not parse stop time (%v)\n", err)
 			os.Exit(1)
 		}
-		filter.FilterStop(time)
+		// if stop time is precisely a day boundary then make it the previous day 22:59:59 instead
+		// this is so that we don't actually ask for results for the first second of the stop day
+		h, m, s := t.Clock()
+		if h == 0 && m == 0 && s == 0 {
+			t = t.Add(time.Second * -1)
+		}
+		filter.FilterStop(t)
 	}
 
 	if flags.filterAnchors {

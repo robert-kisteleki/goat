@@ -1,5 +1,10 @@
 # goat changelog
 
+## next
+
+* CHANGED: if the result download stop time is precisely on a day boundary, then it's adjusted
+  to be 23:59:59 of the previous day instead
+
 ## v0.7.2
 
 * FIX: measurement spec uses "country" not "cc" as probe country code filter
