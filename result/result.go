@@ -32,7 +32,7 @@ func Parse(from string) (Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	if res.GetFirmwareVersion() <= 1 {
+	if res.GetFirmwareVersion() <= 1 && res.TypeName() != "connection" {
 		return nil, fmt.Errorf("firmware version 1 and below results are not supported")
 	}
 	return ParseWithTypeHint(from, res.TypeName())
