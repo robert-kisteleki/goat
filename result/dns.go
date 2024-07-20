@@ -416,6 +416,11 @@ func makeDnsResponse(
 	de.AnswerCount = ans.AnswerCount
 	de.AdditionalCount = ans.AdditionalCount
 
+	if len(de.AnswerBuf) == 0 {
+		// don't try the rest if abuf was not present to begin with
+		return de, nil
+	}
+
 	// use an (excellent) library to parse details out of abuf
 	var parsed dns.Msg
 	err = parsed.Unpack(de.AnswerBuf)
