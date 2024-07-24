@@ -40,9 +40,11 @@ func OutputDnsResponseDetail(resp *result.DnsResponse) string {
 func OutputDnsResponseFocus(resp *result.DnsResponse, typehint []string) string {
 	set := make([]string, 0)
 	for _, detail := range resp.AllAnswers() {
-		if len(typehint) == 0 ||
-			slices.Contains(typehint, result.DnsTypeNames[detail.Type]) {
-			set = append(set, detail.Data)
+		if detail.Class == 1 || detail.Class == 3 {
+			if len(typehint) == 0 ||
+				slices.Contains(typehint, result.DnsTypeNames[detail.Type]) {
+				set = append(set, detail.Data)
+			}
 		}
 	}
 	slices.Sort(set)

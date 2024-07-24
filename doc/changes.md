@@ -6,6 +6,7 @@
   to be 23:59:59 of the previous day instead
 * NEW: `some` output formatter for connections, including a processed `table` format
 * FIX: don't try to parse abuf in DNS responses if it's not there
+* FIX: only consider IN and CHAOS classes for `dnsstat` output
 
 ## v0.7.2
 
