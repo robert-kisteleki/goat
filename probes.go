@@ -33,7 +33,7 @@ type Probe struct {
 	Prefix6        *netip.Prefix `json:"prefix_v6"`
 	Public         bool          `json:"is_public"`
 	Status         ProbeStatus   `json:"status"`
-	StatusSince    uniTime       `json:"status_since"`
+	StatusSince    *uniTime      `json:"status_since"`
 	TotalUptime    uint          `json:"total_uptime"`
 	Type           string        `json:"type"`
 	Tags           []Tag         `json:"tags"`
@@ -55,6 +55,7 @@ const (
 	ProbeStatusConnected             // 1
 	ProbeStatusDisconnected          // 2
 	ProbeStatusAbandoned             // 3
+	ProbeStatusWrittenOff            // 4
 )
 
 // ProbeStatusDict maps the probe status codes to human readable descriptions
@@ -63,6 +64,7 @@ var ProbeStatusDict = map[uint]string{
 	ProbeStatusConnected:      "Connected",
 	ProbeStatusDisconnected:   "Disconnected",
 	ProbeStatusAbandoned:      "Abandoned",
+	ProbeStatusWrittenOff:     "WrittenOff",
 }
 
 // ProbeStatus as defined by the API

@@ -248,6 +248,8 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 		filter.FilterStatus(goat.ProbeStatusDisconnected)
 	case "A":
 		filter.FilterStatus(goat.ProbeStatusAbandoned)
+	case "W":
+		filter.FilterStatus(goat.ProbeStatusWrittenOff)
 	default:
 		fmt.Fprintf(os.Stderr, "ERROR: unknown status filter\n")
 		os.Exit(1)
@@ -323,7 +325,7 @@ func parseFindProbeArgs(args []string) *findProbeFlags {
 	flagsFindProbe.Float64Var(&flags.filterLonlte, "lonlte", 0.0, "Filter longitude being less than or equal to ('west of') this value (in degrees)")
 	flagsFindProbe.StringVar(&flags.filterPrefix4, "prefix4", "", "Filter for IPv4 prefix")
 	flagsFindProbe.StringVar(&flags.filterPrefix6, "prefix6", "", "Filter for IPv6 prefix")
-	flagsFindProbe.StringVar(&flags.filterStatus, "status", "C", "Status to filter for: '' any, 'N' never-connected, 'C' connected, 'D' disconnected, 'A' abandoned")
+	flagsFindProbe.StringVar(&flags.filterStatus, "status", "C", "Status to filter for: '' any, 'N' never-connected, 'C' connected, 'D' disconnected, 'A' abandoned, 'W' written-off")
 	flagsFindProbe.BoolVar(&flags.filterAnchor, "anchor", false, "Filter for anchors only")
 	flagsFindProbe.BoolVar(&flags.filterNotAnchor, "notanchor", false, "Filter for non-anchors only")
 	flagsFindProbe.BoolVar(&flags.filterPublic, "public", false, "Filter for public probes only")
