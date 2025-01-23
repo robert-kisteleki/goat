@@ -1,12 +1,12 @@
 /*
-  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
 
 package goat
 
-const version = "v0.7.2"
+const version = "v0.7.3"
 
 var (
 	uaString      = "goat " + version
