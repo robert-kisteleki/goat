@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -24,6 +24,7 @@ import (
 var verbose bool
 var total uint
 var connectLastResults map[uint]*result.ConnectionResult
+var connectAllResults []*result.ConnectionResult
 var connectTableOutput bool
 
 func init() {
@@ -52,6 +53,7 @@ func setup(isverbose bool, options []string) {
 
 func start() {
 	connectLastResults = make(map[uint]*result.ConnectionResult)
+	connectAllResults = make([]*result.ConnectionResult, 0)
 }
 
 func process(res any) {
@@ -72,7 +74,8 @@ func process(res any) {
 		case *result.NtpResult:
 			out = SomeOutputNtp(rt)
 		case *result.ConnectionResult:
-			out = SomeOutputConnection(rt)
+			// no output here, we need to collect all connection results first
+			addConnectionEvent(rt)
 		case *result.UptimeResult:
 			out = SomeOutputUptime(rt)
 		}
@@ -95,18 +98,37 @@ func process(res any) {
 }
 
 func finish() {
-	for _, last := range connectLastResults {
-		if last.Event == "connect" {
+	printLastConnectionEvent := func(prb uint) {
+		lcr := connectLastResults[prb]
+		if lcr != nil && lcr.Event == "connect" {
 			fmt.Println(connectTableEntry(
-				last.ProbeID,
-				last.Asn,
-				last.Prefix,
-				last.GetTimeStamp(),
+				prb,
+				lcr.Asn,
+				lcr.Prefix,
+				lcr.GetTimeStamp(),
 				time.Time{},
-				last.Controller,
+				lcr.Controller,
 			))
 			total++
 		}
+	}
+
+	sortConnectionResults()
+
+	var lastprobe uint = 0
+	for _, res := range connectAllResults {
+		if lastprobe != 0 && lastprobe != res.ProbeID {
+			printLastConnectionEvent(lastprobe)
+		}
+		out := SomeOutputConnection(res)
+		if out != "" {
+			fmt.Println(out)
+			total++
+		}
+		lastprobe = res.ProbeID
+	}
+	if lastprobe != 0 {
+		printLastConnectionEvent(lastprobe)
 	}
 
 	if verbose {
@@ -114,6 +136,7 @@ func finish() {
 	}
 }
 
+// SomeOutputPing returns the "some" output for a ping result
 func SomeOutputPing(res *result.PingResult) string {
 	return res.BaseString() +
 		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f/%f",
@@ -122,6 +145,7 @@ func SomeOutputPing(res *result.PingResult) string {
 		)
 }
 
+// SomeOutputDns returns the "some" output for a DNS result
 func SomeOutputDns(res *result.DnsResult) string {
 	return res.BaseString() +
 		fmt.Sprintf("\t%d\t%d",
@@ -130,6 +154,7 @@ func SomeOutputDns(res *result.DnsResult) string {
 		)
 }
 
+// SomeOutputTraceroute returns the "some" output for a traceroute result
 func SomeOutputTraceroute(res *result.TracerouteResult) string {
 	return res.BaseString() +
 		fmt.Sprintf("\t%s\t%d",
@@ -138,6 +163,7 @@ func SomeOutputTraceroute(res *result.TracerouteResult) string {
 		)
 }
 
+// SomeOutputCert returns the "some" output for a TLS certificate result
 func SomeOutputCert(res *result.CertResult) string {
 	ret := res.BaseString()
 	if res.Error != nil {
@@ -161,11 +187,13 @@ func SomeOutputCert(res *result.CertResult) string {
 	return ret
 }
 
+// SomeOutputHttp returns the "some" output for an HTTP result
 func SomeOutputHttp(res *result.HttpResult) string {
 	return res.BaseString() +
 		fmt.Sprintf("\t%s", res.Uri)
 }
 
+// SomeOutputNtp returns the "some" output for an NTP result
 func SomeOutputNtp(res *result.NtpResult) string {
 	return res.BaseString() +
 		fmt.Sprintf("\t%s\t%d\t%d\t%d",
@@ -176,12 +204,25 @@ func SomeOutputNtp(res *result.NtpResult) string {
 		)
 }
 
+// SomeOutputConnection returns the "some" output for a connection result
 func SomeOutputConnection(res *result.ConnectionResult) string {
 	if connectTableOutput {
 		return someOutputConnectionTable(res)
 	} else {
 		return someOutputConnectionSimple(res)
 	}
+}
+
+// SomeOutputUptime returns the "some" output for an uptime result
+func SomeOutputUptime(res *result.UptimeResult) string {
+	return res.BaseString() +
+		fmt.Sprintf("\t%d",
+			res.Uptime,
+		)
+}
+
+func addConnectionEvent(res *result.ConnectionResult) {
+	connectAllResults = append(connectAllResults, res)
 }
 
 func someOutputConnectionSimple(res *result.ConnectionResult) string {
@@ -251,9 +292,21 @@ func connectTableEntry(
 	return fmt.Sprintf("%d\t%s\t%s\t%v\t%v\t%s\t%v", probe, sas, sprefix, asTime(from), asTime(until), dur, ctr)
 }
 
-func SomeOutputUptime(res *result.UptimeResult) string {
-	return res.BaseString() +
-		fmt.Sprintf("\t%d",
-			res.Uptime,
-		)
+// sorts the connection results by probe ID and timestamp
+func sortConnectionResults() {
+	slices.SortFunc(connectAllResults, func(a, b *result.ConnectionResult) int {
+		if a.ProbeID < b.ProbeID {
+			return -1
+		}
+		if a.ProbeID > b.ProbeID {
+			return 1
+		}
+		if a.GetTimeStamp().Before(b.GetTimeStamp()) {
+			return -1
+		}
+		if a.GetTimeStamp().After(b.GetTimeStamp()) {
+			return 1
+		}
+		return 0
+	})
 }
