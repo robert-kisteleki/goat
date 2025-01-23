@@ -2,11 +2,17 @@
 
 ## next
 
+* ...
+
+## v0.7.3
+
 * CHANGED: if the result download stop time is precisely on a day boundary, then it's adjusted
   to be 23:59:59 of the previous day instead
-* NEW: `some` output formatter for connections, including a processed `table` format
+* NEW: `some` output formatter for connections, including a processed `table` format. Note: this needs sorting of the API output so it uses more memory than just streaming the results.
 * FIX: don't try to parse abuf in DNS responses if it's not there
 * FIX: only consider IN and CHAOS classes for `dnsstat` output
+* ADD: add WrittenOff filter to finding probes
+* CHANGED: dependency updates
 
 ## v0.7.2
 
