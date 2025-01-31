@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -194,6 +194,10 @@ func populateProbeCache() {
 
 		// store for the next run
 		b, _ := json.Marshal(&probe)
-		cachefile.WriteString(string(b) + "\n")
+		_, err := cachefile.WriteString(string(b) + "\n")
+		if err != nil {
+			fmt.Printf("# WARNING: failed to store probe metadata in local cache: %v\n", err)
+			return
+		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -176,7 +176,7 @@ func processResultFlags(flags *resultFlags) (
 	if flags.saveFileName != "" {
 		f, err := os.Create(flags.saveFileName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: cold not write to logfile (%v)\n", err)
+			fmt.Fprintf(os.Stderr, "ERROR: could not write to logfile (%v)\n", err)
 			os.Exit(1)
 		}
 		filter.Save(f)
@@ -212,7 +212,7 @@ func parseResultArgs(args []string) *resultFlags {
 	// limit
 	flagsGetResult.UintVar(&flags.limit, "limit", 0, "Maximum amount of results to fetch")
 
-	flagsGetResult.Parse(args)
+	_ = flagsGetResult.Parse(args)
 
 	return &flags
 }

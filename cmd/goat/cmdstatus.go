@@ -1,5 +1,5 @@
 /*
-  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -89,7 +89,7 @@ func parseStatusCheckArgs(args []string) *statusCheckFlags {
 	flagsStatusCheck.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most'")
 	flagsStatusCheck.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 
-	flagsStatusCheck.Parse(args)
+	_ = flagsStatusCheck.Parse(args)
 
 	return &flags
 }

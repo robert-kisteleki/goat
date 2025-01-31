@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -342,7 +342,7 @@ func parseFindProbeArgs(args []string) *findProbeFlags {
 	// limit
 	flagsFindProbe.UintVar(&flags.limit, "limit", 100, "Maximum amount of probes to retrieve")
 
-	flagsFindProbe.Parse(args)
+	_ = flagsFindProbe.Parse(args)
 
 	return &flags
 }

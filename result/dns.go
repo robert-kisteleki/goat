@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -425,7 +425,7 @@ func makeDnsResponse(
 	var parsed dns.Msg
 	err = parsed.Unpack(de.AnswerBuf)
 	if err != nil {
-		return de, fmt.Errorf("error parsing abuf: " + err.Error())
+		return de, fmt.Errorf("error parsing abuf: %v", err.Error())
 	}
 
 	// concatenate the (simplified) answers from all categories

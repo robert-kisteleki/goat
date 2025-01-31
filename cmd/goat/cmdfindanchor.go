@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -144,7 +144,7 @@ func parseFindAnchorArgs(args []string) *findAnchorFlags {
 	// limit
 	flagsFindAnchor.UintVar(&flags.limit, "limit", 100, "Maximum amount of anchors to retrieve")
 
-	flagsFindAnchor.Parse(args)
+	_ = flagsFindAnchor.Parse(args)
 
 	return &flags
 }

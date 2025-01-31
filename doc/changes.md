@@ -2,7 +2,7 @@
 
 ## next
 
-* ...
+* CHANGED: fix issues reported by `golangci-lint`
 
 ## v0.7.3
 

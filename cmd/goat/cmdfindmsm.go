@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -429,7 +429,7 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	// limit
 	flagsFindMsm.UintVar(&flags.limit, "limit", 100, "Maximum amount of measurements to retrieve")
 
-	flagsFindMsm.Parse(args)
+	_ = flagsFindMsm.Parse(args)
 
 	return &flags
 }

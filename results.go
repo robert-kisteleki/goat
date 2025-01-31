@@ -1,5 +1,5 @@
 /*
-  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -131,18 +131,22 @@ func (filter *ResultsFilter) GetResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
+	var err error
 	switch {
 	case filter.id != 0 && !filter.stream:
-		filter.downloadResults(verbose, results)
+		err = filter.downloadResults(verbose, results)
 	case filter.id != 0 && filter.stream:
-		filter.streamResults(verbose, results)
+		err = filter.streamResults(verbose, results)
 	case filter.id == 0 && filter.stream:
-		results <- result.AsyncResult{Result: nil, Error: fmt.Errorf("no ID was speficied for stream")}
-		close(results)
+		err = fmt.Errorf("no ID was speficied for stream")
 	case filter.file != "":
-		filter.getFileResults(verbose, results)
+		err = filter.getFileResults(verbose, results)
 	default:
-		results <- result.AsyncResult{Result: nil, Error: fmt.Errorf("neither ID nor input file were specified")}
+		err = fmt.Errorf("neither ID nor input file were specified")
+	}
+
+	if err != nil {
+		results <- result.AsyncResult{Result: nil, Error: err}
 		close(results)
 	}
 }
@@ -152,17 +156,17 @@ func (filter *ResultsFilter) GetResults(
 func (filter *ResultsFilter) downloadResults(
 	verbose bool,
 	results chan result.AsyncResult,
-) {
+) error {
 	defer close(results)
 
 	// prepare to read results
 	read, err := filter.openNetworkResults(verbose)
 	if err != nil {
 		results <- result.AsyncResult{Result: nil, Error: err}
-		return
+		return err
 	}
 
-	filter.readResults(verbose, read, results)
+	return filter.readResults(verbose, read, results)
 }
 
 // StreamResults returns results from the streaming API
@@ -170,20 +174,23 @@ func (filter *ResultsFilter) downloadResults(
 func (filter *ResultsFilter) streamResults(
 	verbose bool,
 	results chan result.AsyncResult,
-) {
+) error {
 	// connect to the streaming API
 	conn, _, err := websocket.DefaultDialer.Dial(streamBaseURL, nil)
 	if err != nil {
 		results <- result.AsyncResult{Result: nil, Error: err}
 		close(results)
-		return
+		return nil
 	}
 
 	if filter.timeout != 0 {
-		conn.SetReadDeadline(time.Now().Add(filter.timeout))
+		err = conn.SetReadDeadline(time.Now().Add(filter.timeout))
+		if err != nil && verbose {
+			fmt.Printf("# WARNING: error setting read deadline: %v\n", err)
+		}
 	}
 
-	// handle the resuts coming form the websocket
+	// handle the results coming from the websocket
 	go filter.streamReceiveHandler(verbose, conn, results)
 
 	// using types and marshaling may be overkill - but it's flexible
@@ -195,7 +202,12 @@ func (filter *ResultsFilter) streamResults(
 	}
 	subscription[1] = params{"result", filter.id}
 
-	conn.WriteJSON(subscription)
+	err = conn.WriteJSON(subscription)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // getFileResults returns results from a file via a channel
@@ -203,7 +215,7 @@ func (filter *ResultsFilter) streamResults(
 func (filter *ResultsFilter) getFileResults(
 	verbose bool,
 	results chan result.AsyncResult,
-) {
+) error {
 	defer close(results)
 
 	var file *os.File
@@ -217,29 +229,33 @@ func (filter *ResultsFilter) getFileResults(
 		file, err = os.Open(filter.file)
 		if err != nil {
 			results <- result.AsyncResult{Result: nil, Error: err}
-			return
+			return err
 		}
 		defer file.Close()
 
 		if verbose {
 			fmt.Printf("# Reading results from file: %s\n", filter.file)
 		}
+
+		return nil
 	}
 
 	read := bufio.NewScanner(bufio.NewReader(file))
 
-	filter.readResults(verbose, read, results)
+	return filter.readResults(verbose, read, results)
 }
 
 func (filter *ResultsFilter) readResults(
 	verbose bool,
 	read *bufio.Scanner,
 	results chan result.AsyncResult,
-) {
+) error {
 	for read.Scan() && (filter.limit == 0 || filter.fetched < filter.limit) {
 		line := read.Text()
 		filter.processResult(line, verbose, results)
 	}
+
+	return nil
 }
 
 func (filter *ResultsFilter) streamReceiveHandler(
@@ -259,7 +275,10 @@ func (filter *ResultsFilter) streamReceiveHandler(
 		}
 
 		if filter.timeout != 0 {
-			connection.SetReadDeadline(time.Now().Add(filter.timeout))
+			err = connection.SetReadDeadline(time.Now().Add(filter.timeout))
+			if err != nil && verbose {
+				fmt.Printf("# WARNING: error setting read deadline: %v\n", err)
+			}
 		}
 
 		// instead of parsing the full message as JSON, we make a shortcut
@@ -299,6 +318,9 @@ func (filter *ResultsFilter) processResult(
 		if filter.saveFile != nil {
 			_, err := filter.saveFile.WriteString(resultString + "\n")
 			if err != nil {
+				if verbose {
+					fmt.Printf("# WARNING: error writing to file: %v\n", err)
+				}
 				results <- result.AsyncResult{Result: nil, Error: err}
 			}
 			// continue regardless of whether writing was successful

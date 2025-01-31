@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -379,14 +379,14 @@ func TestMeasureSpec(t *testing.T) {
 	}
 
 	spec = MeasurementSpec{}
-	spec.AddProbesArea("WW", 3)
+	_ = spec.AddProbesArea("WW", 3)
 	_, err = spec.Schedule()
 	if err == nil {
 		t.Errorf("Measurement spec without targets is accepted")
 	}
 
 	spec = MeasurementSpec{}
-	spec.AddPing("ping", "google.com", 4, nil, nil)
+	_ = spec.AddPing("ping", "google.com", 4, nil, nil)
 	_, err = spec.Schedule()
 	if err == nil {
 		t.Errorf("Measurement spec without probes is accepted")

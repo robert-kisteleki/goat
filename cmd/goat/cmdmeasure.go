@@ -1,5 +1,5 @@
 /*
-  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -222,7 +222,7 @@ func commandMeasure(args []string) {
 			rflags.limit = uint(flags.totalProbes)
 		}
 		if flags.msmdns {
-			rflags.outopts.Set("type:" + flags.msmopttype)
+			_ = rflags.outopts.Set("type:" + flags.msmopttype)
 		}
 
 		// most of the work is done by the implementation of the result streaming feature
@@ -387,7 +387,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.StringVar(&flags.save, "save", "", "Save results to this file")
 	flagsMeasure.UintVar(&flags.timeout, "timeout", 60, "Timeout in seconds for result streaming")
 
-	flagsMeasure.Parse(args)
+	_ = flagsMeasure.Parse(args)
 
 	// force uppercase for some
 	flags.msmoptclass = strings.ToUpper(flags.msmoptclass)
@@ -444,32 +444,40 @@ func parseProbeSpec(
 		}
 		switch spectype {
 		case "cc":
-			if len(split[1]) != 2 { // TODO: proper CC validation
-				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe CC spec: invalid CC (in %s)\n", split[1])
+			err = spec.AddProbesCountryWithTags(split[1], n, probetaginc, probetagexc)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: invalid country code '%s'\n", split[1])
 				os.Exit(1)
 			}
-			spec.AddProbesCountryWithTags(split[1], n, probetaginc, probetagexc)
 		case "asn":
 			specval, err := strconv.Atoi(split[1])
-			if err != nil || specval <= 0 {
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe ASN spec: '%s'\n", split[1])
 				os.Exit(1)
 			}
-			spec.AddProbesAsnWithTags(uint(specval), n, probetaginc, probetagexc)
+			err = spec.AddProbesAsnWithTags(uint(specval), n, probetaginc, probetagexc)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: invalid ASN '%s'\n", split[1])
+				os.Exit(1)
+			}
 		case "prefix":
 			prefix, err := netip.ParsePrefix(split[1])
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe prefix spec: '%s'\n", split[1])
 				os.Exit(1)
 			}
-			spec.AddProbesPrefixWithTags(prefix, n, probetaginc, probetagexc)
+			_ = spec.AddProbesPrefixWithTags(prefix, n, probetaginc, probetagexc)
 		case "reuse":
 			msmid, err := strconv.Atoi(split[1])
-			if err != nil || msmid <= 1000000 {
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe reuse measurement ID: '%s'\n", split[1])
 				os.Exit(1)
 			}
-			spec.AddProbesReuseWithTags(uint(msmid), n, probetaginc, probetagexc)
+			err = spec.AddProbesReuseWithTags(uint(msmid), n, probetaginc, probetagexc)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: measurement ID '%s'\n", split[1])
+				os.Exit(1)
+			}
 		case "area":
 			var areas map[string]string = map[string]string{
 				"ww":   "WW",
@@ -484,7 +492,7 @@ func parseProbeSpec(
 				fmt.Fprintf(os.Stderr, "ERROR: unable to parse probe area spec: unknown area '%s'\n", split[1])
 				os.Exit(1)
 			}
-			spec.AddProbesAreaWithTags(area, n, probetaginc, probetagexc)
+			_ = spec.AddProbesAreaWithTags(area, n, probetaginc, probetagexc)
 		}
 		*totalProbes += n
 	}
@@ -511,7 +519,11 @@ func parseProbeListSpec(
 		}
 		list = append(list, uint(n))
 	}
-	spec.AddProbesListWithTags(list, probetaginc, probetagexc)
+	err := spec.AddProbesListWithTags(list, probetaginc, probetagexc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: unable to use probe list '%s'\n", from)
+		os.Exit(1)
+	}
 	*totalProbes += len(list)
 }
 

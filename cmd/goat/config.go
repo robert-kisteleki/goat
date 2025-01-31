@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -192,7 +192,7 @@ func createConfig(confFile string) {
 
 	// having the default config file contents here allows us to distribute
 	// a single binary, without the accompanying default config
-	f.WriteString(`#
+	_, err = f.WriteString(`#
 # this configuration file defines defaults for goat(CLI)
 #
 
@@ -220,6 +220,11 @@ probeprefix = ""
 probelist = ""
 probereuse = ""
 `)
+
+	if err != nil && flagVerbose {
+		fmt.Fprintf(os.Stderr, "# Error creating default config file (%s): %v\n", confFile, err)
+		return
+	}
 
 	if flagVerbose {
 		fmt.Fprintf(os.Stderr, "# Created default config file (%s)\n", confFile)

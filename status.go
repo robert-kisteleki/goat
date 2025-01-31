@@ -1,5 +1,5 @@
 /*
-  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
+  (C) Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -9,7 +9,7 @@ package goat
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 )
 
@@ -121,7 +121,7 @@ func (filter *StatusCheckFilter) StatusCheck(
 	}
 
 	// read the response - it is a single JSON
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		statuses <- AsyncStatusCheckResult{&status, err}
 		return
@@ -135,7 +135,7 @@ func (filter *StatusCheckFilter) StatusCheck(
 			statuses <- AsyncStatusCheckResult{&status, err}
 			return
 		}
-		statuses <- AsyncStatusCheckResult{&status, fmt.Errorf(errors.Error.Detail)}
+		statuses <- AsyncStatusCheckResult{&status, fmt.Errorf("%v", errors.Error.Detail)}
 		return
 	}
 
