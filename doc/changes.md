@@ -3,6 +3,7 @@
 ## next
 
 * CHANGED: fix issues reported by `golangci-lint`
+* CHANGED: dependency updates
 
 ## v0.7.3
 
