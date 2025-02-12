@@ -277,6 +277,10 @@ func parseFindMsmFlags(flags *findMsmFlags) (
 				fs = append(fs, goat.MeasurementStatusNoSuitableProbes)
 			case "den":
 				fs = append(fs, goat.MeasurementStatusDenied)
+			case "fld":
+				fs = append(fs, goat.MeasurementStatusFailed)
+			case "fst":
+				fs = append(fs, goat.MeasurementStatusForcedStop)
 			default:
 				fmt.Fprintf(os.Stderr, "ERROR: unknown status filter\n")
 				os.Exit(1)
@@ -403,7 +407,7 @@ func parseFindMsmArgs(args []string) *findMsmFlags {
 	flagsFindMsm.UintVar(&flags.filterIntervalGte, "intervalgte", 0, "Filter on interval being greater than or equal to this value")
 	flagsFindMsm.UintVar(&flags.filterIntervalLt, "intervallt", 0, "Filter on interval being less than this value")
 	flagsFindMsm.UintVar(&flags.filterIntervalLte, "intervallte", 0, "Filter on interval being less than or equal to this value")
-	flagsFindMsm.StringVar(&flags.filterStatus, "status", "any", "Status to filter for: any/spe/sch/ong/stp")
+	flagsFindMsm.StringVar(&flags.filterStatus, "status", "any", "Status to filter for: any/spe/sch/ong/stp/fld/fst")
 	flagsFindMsm.StringVar(&flags.filterType, "type", "", "Type to filter for: "+strings.Join(goat.MeasurementTypes, ","))
 	flagsFindMsm.StringVar(&flags.filterTags, "tags", "", "Filter tags in this comma separated list")
 	flagsFindMsm.StringVar(&flags.filterTarget, "target", "", "Filter for target (exact IP or prefix)")
