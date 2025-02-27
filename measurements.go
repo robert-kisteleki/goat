@@ -469,6 +469,7 @@ func (filter *MeasurementFilter) GetMeasurementCount() (
 	if filter.my {
 		query += "my/"
 	}
+        filter.params.Add("page_size", "0")
 	query += "?" + filter.params.Encode()
 
 	req, err := http.NewRequest("GET", query, nil)
