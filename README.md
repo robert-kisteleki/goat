@@ -18,7 +18,7 @@ It supports:
 * loading a local file containing measurement results and turning them into Go objects
 * various kinds of output formatters for displaying and aggregating measurement results
 
-The tool needs Go 1.21 to compile.
+The tool needs Go 1.23 to compile.
 
 # Context
 
