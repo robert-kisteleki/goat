@@ -5,6 +5,7 @@
 * CHANGED: fix issues reported by `golangci-lint`
 * CHANGED: dependency updates
 * CHANGED: minor speedup by setting `page_size` to `0` when counting stuff
+* CHANGED: add go (runtime) version to the output of `goat version`
 
 ## v0.7.3
 

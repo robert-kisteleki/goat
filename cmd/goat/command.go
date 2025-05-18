@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/robert-kisteleki/goat"
 )
@@ -62,7 +63,7 @@ func commandHelp() {
 }
 
 func commandVersion() {
-	fmt.Println(goat.UserAgent())
+	fmt.Println(goat.UserAgent() + " (" + runtime.Version() + ")")
 }
 
 // general usage text
