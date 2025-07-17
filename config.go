@@ -32,3 +32,8 @@ func SetStreamBase(newStreamBaseURL string) {
 	// TODO: check sanity of new API base URL
 	streamBaseURL = newStreamBaseURL
 }
+
+// GetStreamBase retrieves the currently configured stream base URL
+func GetStreamBase() string {
+	return streamBaseURL
+}

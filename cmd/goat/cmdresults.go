@@ -71,7 +71,8 @@ func commandResultFromFlags(flags *resultFlags) {
 		if flags.limit != 0 {
 			limits = fmt.Sprintf("%d ", flags.limit)
 		}
-		fmt.Printf("# Listening on the stream for %sresults, starting at %v\n",
+		fmt.Printf("# Listening on the stream (at %s) for %sresults, starting at %v\n",
+			goat.GetStreamBase(),
 			limits,
 			time.Now().UTC(),
 		)
