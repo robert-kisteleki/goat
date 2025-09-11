@@ -27,6 +27,7 @@ type resultFlags struct {
 	filterAnchors      bool
 	filterPublicProbes bool
 	filterLatest       bool
+	filterLatestDays   int
 
 	stream bool
 
@@ -171,6 +172,13 @@ func processResultFlags(flags *resultFlags) (
 	if flags.filterLatest {
 		filter.FilterLatest()
 	}
+	if flags.filterLatestDays != -1 {
+		if flags.filterLatestDays < 0 || flags.filterLatestDays > 16384 {
+			fmt.Fprintf(os.Stderr, "ERROR: lookback days should be between 0 (all) and 16384\n")
+			os.Exit(1)
+		}
+		filter.FilterLatestLookbackDays(uint(flags.filterLatestDays))
+	}
 
 	filter.Stream(flags.stream)
 
@@ -201,6 +209,7 @@ func parseResultArgs(args []string) *resultFlags {
 	flagsGetResult.BoolVar(&flags.filterAnchors, "anchor", false, "Filter for achors only")
 	flagsGetResult.BoolVar(&flags.filterPublicProbes, "public", false, "Filter for public probes only")
 	flagsGetResult.BoolVar(&flags.filterLatest, "latest", false, "Filter for latest results only")
+	flagsGetResult.IntVar(&flags.filterLatestDays, "lookback", -1, "How many days to look back to consider a result. Default is 7.")
 
 	// options
 	flagsGetResult.StringVar(&flags.saveFileName, "save", "", "Save raw results to this file")

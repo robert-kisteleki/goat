@@ -22,20 +22,21 @@ import (
 
 // ResultsFilter struct holds specified filters and other options
 type ResultsFilter struct {
-	params   url.Values
-	id       uint   // which measurement
-	file     string // which file to read from
-	stream   bool   // use result streaming?
-	limit    uint
-	fetched  uint
-	start    *time.Time
-	stop     *time.Time
-	probes   []uint
-	latest   bool
-	typehint string
-	saveFile *os.File // save results to this file (if not nil)
-	saveAll  bool
-	timeout  time.Duration
+	params       url.Values
+	id           uint   // which measurement
+	file         string // which file to read from
+	stream       bool   // use result streaming?
+	limit        uint
+	fetched      uint
+	start        *time.Time
+	stop         *time.Time
+	probes       []uint
+	latest       bool
+	lookbackdays uint // used for latest results
+	typehint     string
+	saveFile     *os.File // save results to this file (if not nil)
+	saveAll      bool
+	timeout      time.Duration
 }
 
 // NewResultsFilter prepares a new result filter object
@@ -89,6 +90,12 @@ func (filter *ResultsFilter) FilterPublicProbes() {
 // FilterLatest "filters" for downloading the latest results only
 func (filter *ResultsFilter) FilterLatest() {
 	filter.latest = true
+}
+
+// FilterLatest "filters" for downloading the latest results only
+func (filter *ResultsFilter) FilterLatestLookbackDays(days uint) {
+	filter.lookbackdays = days
+	filter.params.Add("lookback_days", fmt.Sprintf("%d", days))
 }
 
 // Save the results to this particular file
