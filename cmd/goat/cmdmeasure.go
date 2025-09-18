@@ -58,6 +58,7 @@ type measureFlags struct {
 	msmresolveonprobe bool
 	msmskipdnscheck   bool
 	msmtags           string
+	msmdnsrelookup    uint
 
 	// measurement types
 	msmping  bool
@@ -358,6 +359,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.UintVar(&flags.msminterval, "interval", 0, "Interval for an ongoing measurement")
 	flagsMeasure.UintVar(&flags.msmspread, "spread", 0, "Spread for an ongoing measurement")
 	flagsMeasure.StringVar(&flags.msmtags, "tags", "", "Tags for a measurement")
+	flagsMeasure.UintVar(&flags.msmdnsrelookup, "relookup", 0, "How often to re-lookup the IP of a DNS based target when not using resolve-on-probe (in hours, mininum 24)")
 
 	// measurement type specific options
 	flagsMeasure.UintVar(&flags.msmoptparis, "paris", 16, "TRACE: paris ID")
@@ -574,6 +576,11 @@ func processBaseOptions(flags *measureFlags) *goat.BaseOptions {
 	if flags.msmtags != "" {
 		opts.Tags = strings.Split(flags.msmtags, ",")
 	}
+	if flags.msmdnsrelookup > 0 && flags.msmdnsrelookup < 24 {
+		fmt.Fprintf(os.Stderr, "ERROR: DNS re-lookup time has to be >=24 (hours)\n")
+		os.Exit(1)
+	}
+	opts.DnsReLookup = flags.msmdnsrelookup
 	return &opts
 }
 

@@ -48,6 +48,7 @@ type measurementTargetBase struct {
 	Tags           *[]string `json:"tags,omitempty"`
 	Spread         *uint     `json:"spread,omitempty"`
 	SkipDNSCheck   *bool     `json:"skip_dns_check,omitempty"`
+	DnsReLookup    *uint     `json:"target_update_hours,omitempty"`
 }
 
 type measurementTargetPing struct {
@@ -123,6 +124,7 @@ type BaseOptions struct {
 	Tags           []string
 	Spread         uint
 	SkipDNSCheck   bool
+	DnsReLookup    uint
 }
 type PingOptions struct {
 	Packets        uint // API default: 3
@@ -365,6 +367,9 @@ func (def *measurementTargetBase) addCommonFields(
 		}
 		if baseoptions.Tags != nil {
 			def.Tags = &baseoptions.Tags
+		}
+		if baseoptions.DnsReLookup != 0 {
+			def.DnsReLookup = &baseoptions.DnsReLookup
 		}
 	}
 

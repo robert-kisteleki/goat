@@ -7,6 +7,7 @@
 * CHANGED: minor speedup by setting `page_size` to `0` when counting stuff
 * CHANGED: add go (runtime) version to the output of `goat version`
 * ADD: new filter for lookback days `lookback` when fetching latest results
+* ADD: DNS re-lookup parameter for measurements
 
 ## v0.7.3
 
