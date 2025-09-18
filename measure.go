@@ -39,16 +39,19 @@ type measurementTargetDefinition interface {
 }
 
 type measurementTargetBase struct {
-	Description    string    `json:"description"`
-	Target         *string   `json:"target,omitempty"`
-	Type           string    `json:"type"`
-	AddressFamily  uint      `json:"af"`
-	Interval       *uint     `json:"interval,omitempty"`
-	ResolveOnProbe *bool     `json:"resolve_on_probe,omitempty"`
-	Tags           *[]string `json:"tags,omitempty"`
-	Spread         *uint     `json:"spread,omitempty"`
-	SkipDNSCheck   *bool     `json:"skip_dns_check,omitempty"`
-	DnsReLookup    *uint     `json:"target_update_hours,omitempty"`
+	Description         string    `json:"description"`
+	Target              *string   `json:"target,omitempty"`
+	Type                string    `json:"type"`
+	AddressFamily       uint      `json:"af"`
+	Interval            *uint     `json:"interval,omitempty"`
+	ResolveOnProbe      *bool     `json:"resolve_on_probe,omitempty"`
+	Tags                *[]string `json:"tags,omitempty"`
+	Spread              *uint     `json:"spread,omitempty"`
+	SkipDNSCheck        *bool     `json:"skip_dns_check,omitempty"`
+	DnsReLookup         *uint     `json:"target_update_hours,omitempty"`
+	AutoTopup           *bool     `json:"auto_topup,omitempty"`
+	AutoTopupDays       *uint     `json:"auto_topup_prb_days_off,omitempty"`
+	AutoTopupSimilarity *float64  `json:"auto_topup_prb_similarity,omitempty"`
 }
 
 type measurementTargetPing struct {
@@ -119,12 +122,15 @@ type measurementTargetHttp struct {
 
 // various measurement options
 type BaseOptions struct {
-	ResolveOnProbe bool
-	Interval       uint
-	Tags           []string
-	Spread         uint
-	SkipDNSCheck   bool
-	DnsReLookup    uint
+	ResolveOnProbe      bool
+	Interval            uint
+	Tags                []string
+	Spread              uint
+	SkipDNSCheck        bool
+	DnsReLookup         uint
+	AutoTopup           bool
+	AutoTopupDays       uint
+	AutoTopupSimilarity float64
 }
 type PingOptions struct {
 	Packets        uint // API default: 3
@@ -370,6 +376,20 @@ func (def *measurementTargetBase) addCommonFields(
 		}
 		if baseoptions.DnsReLookup != 0 {
 			def.DnsReLookup = &baseoptions.DnsReLookup
+		}
+		if baseoptions.AutoTopup {
+			yes := true
+			def.AutoTopup = &yes
+		}
+		if baseoptions.AutoTopupDays != 0 {
+			def.AutoTopupDays = &baseoptions.AutoTopupDays
+			yes := true
+			def.AutoTopup = &yes // forcing this
+		}
+		if baseoptions.AutoTopupSimilarity != 0.0 {
+			def.AutoTopupSimilarity = &baseoptions.AutoTopupSimilarity
+			yes := true
+			def.AutoTopup = &yes // forcing this
 		}
 	}
 

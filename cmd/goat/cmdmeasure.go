@@ -59,6 +59,9 @@ type measureFlags struct {
 	msmskipdnscheck   bool
 	msmtags           string
 	msmdnsrelookup    uint
+	msmautotopup      bool
+	msmautotopupdays  uint
+	msmautotopupsim   float64
 
 	// measurement types
 	msmping  bool
@@ -360,6 +363,9 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.UintVar(&flags.msmspread, "spread", 0, "Spread for an ongoing measurement")
 	flagsMeasure.StringVar(&flags.msmtags, "tags", "", "Tags for a measurement")
 	flagsMeasure.UintVar(&flags.msmdnsrelookup, "relookup", 0, "How often to re-lookup the IP of a DNS based target when not using resolve-on-probe (in hours, mininum 24)")
+	flagsMeasure.BoolVar(&flags.msmautotopup, "topup", false, "Enable auto-topup of probes involved in the measurement")
+	flagsMeasure.UintVar(&flags.msmautotopupdays, "topupdays", 0, "Try to replace a probe after these many days of disconnect (1-30, default 7)")
+	flagsMeasure.Float64Var(&flags.msmautotopupsim, "topupsim", 0.0, "Similarity metric for replacement probes (0.0-1.0, default 0.5)")
 
 	// measurement type specific options
 	flagsMeasure.UintVar(&flags.msmoptparis, "paris", 16, "TRACE: paris ID")
@@ -581,6 +587,17 @@ func processBaseOptions(flags *measureFlags) *goat.BaseOptions {
 		os.Exit(1)
 	}
 	opts.DnsReLookup = flags.msmdnsrelookup
+	opts.AutoTopup = flags.msmautotopup
+	if flags.msmautotopupdays > 30 {
+		fmt.Fprintf(os.Stderr, "ERROR: auto-topup days needs to be < 30 (days)\n")
+		os.Exit(1)
+	}
+	opts.AutoTopupDays = flags.msmautotopupdays
+	if flags.msmautotopupsim < 0.0 || flags.msmautotopupsim > 1.0 {
+		fmt.Fprintf(os.Stderr, "ERROR: auto-topup similartity limit needs to be between 0.0-1.0\n")
+		os.Exit(1)
+	}
+	opts.AutoTopupSimilarity = flags.msmautotopupsim
 	return &opts
 }
 

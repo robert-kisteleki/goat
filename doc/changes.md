@@ -8,6 +8,7 @@
 * CHANGED: add go (runtime) version to the output of `goat version`
 * ADD: new filter for lookback days `lookback` when fetching latest results
 * ADD: DNS re-lookup parameter for measurements
+* ADD: measurement auto-topup options (`topup`, `topupdays`, `topupsim` in the CLI)
 
 ## v0.7.3
 
