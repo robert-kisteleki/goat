@@ -38,6 +38,7 @@ type resultFlags struct {
 	outopts      multioption
 	limit        uint
 	timeout      uint // stream read timeout in secods
+	backlog      bool // ask for stream result backlog?
 }
 
 // Implementation stub of the "result" subcommand, starting from command line args
@@ -181,6 +182,7 @@ func processResultFlags(flags *resultFlags) (
 	}
 
 	filter.Stream(flags.stream)
+	filter.SendBacklog(flags.backlog)
 
 	if flags.saveFileName != "" {
 		f, err := os.Create(flags.saveFileName)
@@ -218,6 +220,7 @@ func parseResultArgs(args []string) *resultFlags {
 	flagsGetResult.StringVar(&flags.output, "output", "some", "Output format: 'some' or 'most' or other available plugins")
 	flagsGetResult.Var(&flags.outopts, "opt", "Options to pass to the output formatter")
 	flagsGetResult.UintVar(&flags.timeout, "timeout", 60, "Timeout in seconds for result streaming")
+	flagsGetResult.BoolVar(&flags.backlog, "backlog", false, "Request backlog when streaming")
 
 	// limit
 	flagsGetResult.UintVar(&flags.limit, "limit", 0, "Maximum amount of results to fetch")

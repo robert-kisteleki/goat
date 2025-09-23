@@ -37,6 +37,7 @@ type ResultsFilter struct {
 	saveFile     *os.File // save results to this file (if not nil)
 	saveAll      bool
 	timeout      time.Duration
+	backlog      bool
 }
 
 // NewResultsFilter prepares a new result filter object
@@ -116,6 +117,11 @@ func (filter *ResultsFilter) Stream(useStream bool) {
 // StreamTimeout sets the timeout for the websocket stream
 func (filter *ResultsFilter) StreamTimeout(timeout time.Duration) {
 	filter.timeout = timeout
+}
+
+// SendBacklog turns on/off the request for the backlog for the websocket stream
+func (filter *ResultsFilter) SendBacklog(backlog bool) {
+	filter.backlog = backlog
 }
 
 // Limit limits the number of result retrieved
@@ -206,14 +212,18 @@ func (filter *ResultsFilter) streamResults(
 	type params struct {
 		StreamType  string `json:"streamType"`
 		Measurement uint   `json:"msm"`
+		SendBacklog bool   `json:"sendBacklog"`
 	}
-	subscription[1] = params{"result", filter.id}
+	subscription[1] = params{"result", filter.id, filter.backlog}
 
 	err = conn.WriteJSON(subscription)
 	if err != nil {
 		return err
 	}
 
+	if verbose {
+		fmt.Printf("# Stream parameters: %+v\n", subscription[1])
+	}
 	return nil
 }
 
@@ -291,12 +301,16 @@ func (filter *ResultsFilter) streamReceiveHandler(
 		// instead of parsing the full message as JSON, we make a shortcut
 		const expectedSubscribePrefix = "[\"atlas_subscribed\","
 		const expectedResultPrefix = "[\"atlas_result\","
+		const expectedBacklogSentPrefix = "[\"atlas_backlog_sent\","
 
 		switch {
 		case expectedResultPrefix == string(msg[:len(expectedResultPrefix)]):
 			// cool, a result
 		case expectedSubscribePrefix == string(msg[:len(expectedSubscribePrefix)]):
 			// cool, subscribe has been confirmed
+			continue
+		case expectedBacklogSentPrefix == string(msg[:len(expectedBacklogSentPrefix)]):
+			// cool, backlog is done
 			continue
 		default:
 			err := fmt.Errorf("unknown stream message received: %v", string(msg))

@@ -9,6 +9,7 @@
 * ADD: new filter for lookback days `lookback` when fetching latest results
 * ADD: DNS re-lookup parameter for measurements
 * ADD: measurement auto-topup options (`topup`, `topupdays`, `topupsim` in the CLI)
+* ADD: ability to ask fo the backlog when streaming (`backlog`); automatically turned on for just scheduled one-offs
 
 ## v0.7.3
 

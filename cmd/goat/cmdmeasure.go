@@ -221,6 +221,7 @@ func commandMeasure(args []string) {
 			outopts:      flags.outopts,
 			limit:        0,
 			timeout:      flags.timeout,
+			backlog:      true,
 		}
 		if !flags.periodic {
 			rflags.limit = uint(flags.totalProbes)
