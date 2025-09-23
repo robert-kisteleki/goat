@@ -7,7 +7,7 @@
 * CHANGED: minor speedup by setting `page_size` to `0` when counting stuff
 * CHANGED: add go (runtime) version to the output of `goat version`
 * ADD: new filter for lookback days `lookback` when fetching latest results
-* ADD: DNS re-lookup parameter for measurements
+* ADD: DNS re-lookup parameter (`relookup`) for measurements
 * ADD: measurement auto-topup options (`topup`, `topupdays`, `topupsim` in the CLI)
 * ADD: ability to ask fo the backlog when streaming (`backlog`); automatically turned on for just scheduled one-offs
 
