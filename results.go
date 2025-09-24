@@ -189,7 +189,7 @@ func (filter *ResultsFilter) streamResults(
 	results chan result.AsyncResult,
 ) error {
 	// connect to the streaming API
-	conn, _, err := websocket.DefaultDialer.Dial(streamBaseURL, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(streamBaseURL+"?client=goat_"+version, nil)
 	if err != nil {
 		results <- result.AsyncResult{Result: nil, Error: err}
 		close(results)
