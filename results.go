@@ -170,12 +170,9 @@ func (filter *ResultsFilter) downloadResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) error {
-	defer close(results)
-
 	// prepare to read results
 	read, err := filter.openNetworkResults(verbose)
 	if err != nil {
-		results <- result.AsyncResult{Result: nil, Error: err}
 		return err
 	}
 
@@ -233,8 +230,6 @@ func (filter *ResultsFilter) getFileResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) error {
-	defer close(results)
-
 	var file *os.File
 	if filter.file == "-" {
 		file = os.Stdin
@@ -245,7 +240,6 @@ func (filter *ResultsFilter) getFileResults(
 		var err error
 		file, err = os.Open(filter.file)
 		if err != nil {
-			results <- result.AsyncResult{Result: nil, Error: err}
 			return err
 		}
 		defer file.Close()
@@ -253,8 +247,6 @@ func (filter *ResultsFilter) getFileResults(
 		if verbose {
 			fmt.Printf("# Reading results from file: %s\n", filter.file)
 		}
-
-		return nil
 	}
 
 	read := bufio.NewScanner(bufio.NewReader(file))
@@ -267,6 +259,8 @@ func (filter *ResultsFilter) readResults(
 	read *bufio.Scanner,
 	results chan result.AsyncResult,
 ) error {
+	defer close(results)
+
 	for read.Scan() && (filter.limit == 0 || filter.fetched < filter.limit) {
 		line := read.Text()
 		filter.processResult(line, verbose, results)
