@@ -342,7 +342,7 @@ func (filter *ProbeFilter) GetProbeCount() (
 	}
 
 	// counting needs application of the specified filters
-        filter.params.Add("page_size", "0")
+	filter.params.Add("page_size", "0")
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
 	resp, err := apiGetRequest(filter.verbose, query, nil)
