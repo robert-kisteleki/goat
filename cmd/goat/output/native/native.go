@@ -145,10 +145,30 @@ func nativeOutputTraceroute(res *result.TracerouteResult) {
 	}
 }
 
+func printRecord(ans result.DnsAnswer) {
+	fmt.Printf("%s\t%d\t%s\t%s\t%s\n",
+		ans.Name,
+		ans.Ttl,
+		result.DnsClassNames[ans.Class],
+		result.DnsTypeNames[ans.Type],
+		ans.Data,
+	)
+}
+
 func nativeOutputDns(res *result.DnsResult) {
 	fmt.Printf("; Probe %d, source %v\n", res.ProbeID, res.FromAddr)
 
 	for _, resp := range res.Responses {
+		var extraWithoutOpt41 uint
+		if resp.AdditionalCount > 0 {
+			for _, ans := range resp.Extra {
+				// OPT
+				if ans.Type != 41 {
+					extraWithoutOpt41++
+				}
+			}
+		}
+
 		fmt.Println(";; Got answer:")
 		fmt.Printf(";; ->>HEADER<<- opcode: QUERY, status: %s, id: %d\n",
 			result.DnsRcodeNames[resp.Rcode],
@@ -165,7 +185,7 @@ func nativeOutputDns(res *result.DnsResult) {
 			resp.QueriesCount,
 			resp.AnswerCount,
 			resp.NameServerCount,
-			resp.AdditionalCount,
+			extraWithoutOpt41,
 		)
 		fmt.Println(";;", flags)
 		if resp.RecursionDesired && !resp.RecursionAvailable {
@@ -190,7 +210,34 @@ func nativeOutputDns(res *result.DnsResult) {
 			}
 		}
 
-		nativeOutputDnsResponse(resp)
+		fmt.Println(";; QUESTION SECTION:")
+		fmt.Printf(";%s\t%s\t%s\n",
+			resp.Question.Name,
+			result.DnsClassNames[resp.Question.Class],
+			result.DnsTypeNames[resp.Question.Type],
+		)
+		fmt.Println()
+		if resp.AnswerCount > 0 {
+			fmt.Println(";; ANSWER SECTION:")
+			for _, ans := range resp.Answer {
+				printRecord(ans)
+			}
+		}
+		if resp.NameServerCount > 0 {
+			fmt.Println(";; AUTHORITY SECTION:")
+			for _, ans := range resp.Ns {
+				printRecord(ans)
+			}
+		}
+		if extraWithoutOpt41 > 0 {
+			fmt.Println()
+			fmt.Println(";; ADDITIONAL SECTION:")
+			for _, ans := range resp.Extra {
+				if ans.Type != 41 { // skip OPT
+					printRecord(ans)
+				}
+			}
+		}
 
 		fmt.Println()
 		fmt.Printf(";; Query time: %d msec\n", int(resp.ResponseTime))
@@ -198,40 +245,5 @@ func nativeOutputDns(res *result.DnsResult) {
 		fmt.Printf(";; WHEN: %v\n", resp.TimeStamp)
 		fmt.Printf(";; MSG SIZE  rcvd: %d\n", resp.ResponseSize)
 		fmt.Println()
-	}
-}
-
-func nativeOutputDnsResponse(resp result.DnsResponse) {
-	printrec := func(ans result.DnsAnswer) {
-		fmt.Printf("%s\t%d\t%s\t%s\t%s\n",
-			ans.Name,
-			ans.Ttl,
-			result.DnsClassNames[ans.Class],
-			result.DnsTypeNames[ans.Type],
-			ans.Data,
-		)
-	}
-	fmt.Println(";; QUESTION SECTION:")
-	fmt.Printf(";%s\t%s\t%s\n",
-		resp.Question.Name,
-		result.DnsClassNames[resp.Question.Class],
-		result.DnsTypeNames[resp.Question.Type],
-	)
-	fmt.Println()
-
-	if resp.AnswerCount > 0 {
-		fmt.Println(";; ANSWER SECTION:")
-		for _, ans := range resp.Answer {
-			printrec(ans)
-		}
-	}
-	if resp.AdditionalCount > 0 {
-		fmt.Println()
-		fmt.Println(";; ADDITIONAL SECTION:")
-		for _, ans := range resp.Extra {
-			if ans.Type != 41 { // skip OPT
-				printrec(ans)
-			}
-		}
 	}
 }

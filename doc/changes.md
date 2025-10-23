@@ -10,6 +10,7 @@
 * ADD: DNS re-lookup parameter (`relookup`) for measurements
 * ADD: measurement auto-topup options (`topup`, `topupdays`, `topupsim` in the CLI)
 * ADD: ability to ask fo the backlog when streaming (`backlog`); automatically turned on for just scheduled one-offs
+* ADD: display authoritative section in native DNS output
 * FIX: reading results from a file failed
 * FIX: some errors were reported twice
 
