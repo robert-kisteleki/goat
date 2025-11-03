@@ -2,6 +2,8 @@
 
 ## next
 
+## v0.8.0
+
 * CHANGED: fix issues reported by `golangci-lint`
 * CHANGED: dependency updates
 * CHANGED: minor speedup by setting `page_size` to `0` when counting stuff

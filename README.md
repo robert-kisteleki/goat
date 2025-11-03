@@ -38,7 +38,7 @@ Check the [API Wrapper Quick Start Guide](doc/quickstart-api.md) and the [CLI Qu
 
 # Copyright, Contributing
 
-(C) 2022, 2023 [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
+(C) [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
 
 Contribution is possible and encouraged via the [Github repo]("https://github.com/robert-kisteleki/goat/")
 

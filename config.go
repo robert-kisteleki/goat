@@ -6,7 +6,7 @@
 
 package goat
 
-const version = "v0.7.3"
+const version = "v0.8.0"
 
 var (
 	uaString      = "goat " + version
