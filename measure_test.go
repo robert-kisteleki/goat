@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"reflect"
 	"testing"
+	"time"
 )
 
 // Test if the measurement probe spec part works
@@ -199,11 +200,15 @@ func TestMeasureTargetBase(t *testing.T) {
 	var spec MeasurementSpec
 
 	err = spec.AddPing("description1", "www.meta.com", 6, &BaseOptions{
-		ResolveOnProbe: true,
-		Interval:       999,
-		Tags:           []string{"tag1", "tag2"},
-		Spread:         50,
-		SkipDNSCheck:   true,
+		ResolveOnProbe:      true,
+		Interval:            999,
+		Tags:                []string{"tag1", "tag2"},
+		Spread:              50,
+		SkipDNSCheck:        true,
+		DnsReLookup:         27,
+		AutoTopupDays:       3,
+		AutoTopupSimilarity: 0.17,
+		ClientID:            "user42",
 	}, nil)
 	if err != nil {
 		t.Fatalf("Ping measurement target spec with options failed: %v", err)
@@ -212,10 +217,9 @@ func TestMeasureTargetBase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ping measurement target spec with options failed to marshal to JSON: %v", err)
 	}
-	if string(b2) != `{"description":"description1","target":"www.meta.com","type":"ping","af":6,"interval":999,"resolve_on_probe":true,"tags":["tag1","tag2"],"spread":50,"skip_dns_check":true}` {
+	if string(b2) != `{"description":"description1","target":"www.meta.com","type":"ping","af":6,"interval":999,"resolve_on_probe":true,"tags":["tag1","tag2"],"spread":50,"skip_dns_check":true,"target_update_hours":27,"auto_topup":true,"auto_topup_prb_days_off":3,"auto_topup_prb_similarity":0.17,"aggregator_client_id":"91d5b365ed0cb7ce2148a3634575da73"}` {
 		t.Errorf("Measurement with base options improperly serialized: %s", string(b2))
 	}
-
 }
 
 func TestMeasureTargetPing(t *testing.T) {
@@ -390,5 +394,42 @@ func TestMeasureSpec(t *testing.T) {
 	_, err = spec.Schedule()
 	if err == nil {
 		t.Errorf("Measurement spec without probes is accepted")
+	}
+}
+
+// xxx
+func TestMeasureBasicJson(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddPing("description1", "www.meta.com", 6, &BaseOptions{
+		ResolveOnProbe: true,
+		Interval:       999,
+		Tags:           []string{"tag1", "tag2"},
+		Spread:         50,
+		SkipDNSCheck:   true,
+		DnsReLookup:    23,
+	}, nil)
+	if err != nil {
+		t.Fatalf("Ping measurement target spec with options failed: %v", err)
+	}
+
+	err = spec.AddProbesArea("WW", 5)
+	if err != nil {
+		t.Fatalf("Unable to add probes to the measurement: %v", err)
+	}
+
+	const longForm = "Jan 2, 2006 at 3:04pm (MST)"
+	start, _ := time.Parse(longForm, "Feb 3, 2033 at 7:54pm (PST)")
+	spec.StartTime(start)
+	stop, _ := time.Parse(longForm, "Feb 4, 2033 at 7:54pm (PST)")
+	spec.EndTime(stop)
+
+	b2, err := spec.GetApiJson()
+	if err != nil {
+		t.Fatalf("Could not get JSON format of the measurement: %v", err)
+	}
+	if string(b2) != `{"definitions":[{"description":"description1","target":"www.meta.com","type":"ping","af":6,"interval":999,"resolve_on_probe":true,"tags":["tag1","tag2"],"spread":50,"skip_dns_check":true,"target_update_hours":23}],"probes":[{"type":"area","value":"WW","requested":5}],"is_oneoff":false,"start_time":"2033-02-03T19:54:00Z","stop_time":"2033-02-04T19:54:00Z"}` {
+		t.Errorf("Measurement specification is improperly serialized: %s", string(b2))
 	}
 }
