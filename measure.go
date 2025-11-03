@@ -769,7 +769,7 @@ func (spec *MeasurementSpec) Schedule() (msmlist []uint, err error) {
 
 func (spec *MeasurementSpec) GetApiJson() ([]byte, error) {
 	if len(spec.apiSpec.Definitons) == 0 {
-		return nil, fmt.Errorf("need at least 1 measurement defintion")
+		return nil, fmt.Errorf("need at least 1 measurement definition")
 	}
 
 	if len(spec.apiSpec.Probes) == 0 {
