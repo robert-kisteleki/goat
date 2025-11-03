@@ -62,6 +62,7 @@ type measureFlags struct {
 	msmautotopup      bool
 	msmautotopupdays  uint
 	msmautotopupsim   float64
+	msmclientid       string
 
 	// measurement types
 	msmping  bool
@@ -367,6 +368,7 @@ func parseMeasureArgs(args []string) *measureFlags {
 	flagsMeasure.BoolVar(&flags.msmautotopup, "topup", false, "Enable auto-topup of probes involved in the measurement")
 	flagsMeasure.UintVar(&flags.msmautotopupdays, "topupdays", 0, "Try to replace a probe after these many days of disconnect (1-30, default 7)")
 	flagsMeasure.Float64Var(&flags.msmautotopupsim, "topupsim", 0.0, "Similarity metric for replacement probes (0.0-1.0, default 0.5)")
+	flagsMeasure.StringVar(&flags.msmclientid, "clientid", "", "Client ID for aggregators")
 
 	// measurement type specific options
 	flagsMeasure.UintVar(&flags.msmoptparis, "paris", 16, "TRACE: paris ID")
@@ -599,6 +601,9 @@ func processBaseOptions(flags *measureFlags) *goat.BaseOptions {
 		os.Exit(1)
 	}
 	opts.AutoTopupSimilarity = flags.msmautotopupsim
+	if flags.msmclientid != "" {
+		opts.ClientID = flags.msmclientid
+	}
 	return &opts
 }
 

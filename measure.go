@@ -8,6 +8,8 @@ package goat
 
 import (
 	"bytes"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -52,6 +54,7 @@ type measurementTargetBase struct {
 	AutoTopup           *bool     `json:"auto_topup,omitempty"`
 	AutoTopupDays       *uint     `json:"auto_topup_prb_days_off,omitempty"`
 	AutoTopupSimilarity *float64  `json:"auto_topup_prb_similarity,omitempty"`
+	ClientID            *string   `json:"aggregator_client_id,omitempty"`
 }
 
 type measurementTargetPing struct {
@@ -131,6 +134,7 @@ type BaseOptions struct {
 	AutoTopup           bool
 	AutoTopupDays       uint
 	AutoTopupSimilarity float64
+	ClientID            string
 }
 type PingOptions struct {
 	Packets        uint // API default: 3
@@ -390,6 +394,13 @@ func (def *measurementTargetBase) addCommonFields(
 			def.AutoTopupSimilarity = &baseoptions.AutoTopupSimilarity
 			yes := true
 			def.AutoTopup = &yes // forcing this
+		}
+		if baseoptions.ClientID != "" {
+			// hash the client id
+			hash := sha512.Sum512([]byte(baseoptions.ClientID))
+			hexHash := hex.EncodeToString(hash[:])
+			hexHash32 := hexHash[:32]
+			def.ClientID = &hexHash32
 		}
 	}
 
