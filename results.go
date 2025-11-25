@@ -296,6 +296,7 @@ func (filter *ResultsFilter) streamReceiveHandler(
 		const expectedSubscribePrefix = "[\"atlas_subscribed\","
 		const expectedResultPrefix = "[\"atlas_result\","
 		const expectedBacklogSentPrefix = "[\"atlas_backlog_sent\","
+		const expectedErrorPrefix = "[\"atlas_error\","
 
 		switch {
 		case expectedResultPrefix == string(msg[:len(expectedResultPrefix)]):
@@ -305,6 +306,9 @@ func (filter *ResultsFilter) streamReceiveHandler(
 			continue
 		case expectedBacklogSentPrefix == string(msg[:len(expectedBacklogSentPrefix)]):
 			// cool, backlog is done
+			continue
+		case expectedErrorPrefix == string(msg[:len(expectedErrorPrefix)]):
+			fmt.Printf("# WARNING: error message received from stream: %v\n", msg)
 			continue
 		default:
 			err := fmt.Errorf("unknown stream message received: %v", string(msg))
