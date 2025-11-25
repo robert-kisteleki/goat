@@ -59,16 +59,23 @@ func (cert *CertResult) Parse(from string) (err error) {
 		if icert.DnsError != nil {
 			cert.DnsError = *icert.DnsError
 		} else {
-			// we use dnserror as a hint that there's no real data
-			cert.Method = *icert.Method
-			cert.ReplyTime = *icert.ReplyTime
-			cert.ConnectTime = *icert.ConnectTime
+			if icert.Method != nil {
+				cert.Method = *icert.Method
+			}
+			if icert.ReplyTime != nil {
+				cert.ReplyTime = *icert.ReplyTime
+			}
+			if icert.ConnectTime != nil {
+				cert.ConnectTime = *icert.ConnectTime
+			}
 			// if there's an alert, there's no other real data
 			if icert.Alert == nil {
 				if icert.ServerCipher != nil {
 					cert.ServerCipher = *icert.ServerCipher
 				}
-				cert.ProtocolVersion = *icert.ProtocolVersion
+				if icert.ProtocolVersion != nil {
+					cert.ProtocolVersion = *icert.ProtocolVersion
+				}
 				cert.Certificates, err = icert.Certificates()
 				if err != nil {
 					return nil

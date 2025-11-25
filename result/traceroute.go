@@ -113,13 +113,19 @@ func (trace *TracerouteResult) Parse(from string) (err error) {
 				hopdata.ErrorCode = fmt.Sprint(*ihopdata.ErrorCode)
 			}
 			hopdata.From = ihopdata.From
-			hopdata.Size = *ihopdata.Size
-			hopdata.Ttl = *ihopdata.Ttl
+			if ihopdata.Size != nil {
+				hopdata.Size = *ihopdata.Size
+			}
+			if ihopdata.Ttl != nil {
+				hopdata.Ttl = *ihopdata.Ttl
+			}
 			if ihopdata.Late != nil {
 				hopdata.Late = ihopdata.Late
 				continue // no other data is it was a LATE packet
 			}
-			hopdata.Rtt = *ihopdata.Rtt
+			if ihopdata.Rtt != nil {
+				hopdata.Rtt = *ihopdata.Rtt
+			}
 			if ihopdata.ITtl != nil {
 				hopdata.ITtl = ihopdata.ITtl
 			}
