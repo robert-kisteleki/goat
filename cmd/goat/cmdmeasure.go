@@ -444,7 +444,7 @@ func parseProbeSpec(
 		}
 		n := 0
 		var err error
-		if split[1] == "all" {
+		if split[0] == "all" {
 			n = -1
 		} else {
 			n, err = strconv.Atoi(split[0])
