@@ -2,6 +2,9 @@
 
 ## next
 
+* FIX: HTTP results did not parse `af`, `src_addr` and `dst_addr` into base results.
+  Reported by @moonracker
+
 ## v0.8.0
 
 * CHANGED: fix issues reported by `golangci-lint`

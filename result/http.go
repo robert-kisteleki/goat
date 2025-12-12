@@ -53,6 +53,12 @@ func (http *HttpResult) Parse(from string) (err error) {
 		// only deal with response 1 for now
 
 		resp := ihttp.RawHttpReply[0]
+		// these are not in the common attribute set for HTTP
+		// so fill them in here instead
+		http.SourceAddr = resp.SourceAddr
+		http.DestinationAddr = &resp.DestinationAddr
+		http.AddressFamily = resp.AddressFamily
+
 		if resp.Headers != nil {
 			http.Headers = *resp.Headers
 		}
@@ -101,6 +107,9 @@ type rawHttpReply struct {
 	TimeToConnect   float64         `json:"ttc"`        //
 	TimeToFirstByte float64         `json:"ttfb"`       //
 	Version         string          `json:"ver"`        //
+
+	SourceAddr    netip.Addr `json:"src_addr"`
+	AddressFamily uint       `json:"af"`
 }
 
 type httpReadTiming struct {
