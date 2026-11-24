@@ -10,6 +10,7 @@ import (
 	_ "github.com/robert-kisteleki/goat/cmd/goat/output/dnsstat"
 	_ "github.com/robert-kisteleki/goat/cmd/goat/output/id"
 	_ "github.com/robert-kisteleki/goat/cmd/goat/output/idcsv"
+	_ "github.com/robert-kisteleki/goat/cmd/goat/output/json"
 	_ "github.com/robert-kisteleki/goat/cmd/goat/output/most"
 	_ "github.com/robert-kisteleki/goat/cmd/goat/output/native"
 	_ "github.com/robert-kisteleki/goat/cmd/goat/output/none"

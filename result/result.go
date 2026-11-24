@@ -19,6 +19,8 @@ type Result interface {
 	GetTimeStamp() time.Time
 	GetProbeID() uint
 	GetFirmwareVersion() uint
+	SetRaw(raw string)
+	GetRaw() string
 }
 
 type AsyncResult struct {
@@ -71,6 +73,9 @@ func ParseWithTypeHint(from string, typehint string) (Result, error) {
 		return nil, fmt.Errorf("unknown/unsupported result type %s", typehint)
 	}
 	err := res.Parse(from)
+	if err == nil {
+		res.SetRaw(from)
+	}
 	return res, err
 }
 

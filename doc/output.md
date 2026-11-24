@@ -154,6 +154,10 @@ The following fields are appended to the `some` output:
 
 The option `ts` (ie. with `-opt ts`) prepends each result with the current UTC timestamp. This is mostly useful for result streaming.
 
+## json
+
+The `json` formatter outputs the original JSON object, exactly as it was received, one per line. This applies to all result types (`ping`, `trace`, `dns`, `tls`, `ntp`, `http`, `connection`, `uptime`).
+
 ## native
 
 The `native` formatter tries to display results close to how the native UNIX/Linux tools do. This applies to `ping`, `traceroute` and `dns` results at the moment.

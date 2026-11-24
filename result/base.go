@@ -32,6 +32,17 @@ type BaseResult struct {
 	FromAddr        netip.Addr      `json:"from"`             // IP address of the probe as known by the infra
 	AddressFamily   uint            `json:"af"`               // 4 or 6
 	ResolveTime     *float64        `json:"ttr"`              // only if resolve-on-probe was used
+	raw             string          // the original JSON this result was parsed from
+}
+
+// SetRaw remembers the original JSON representation of the result
+func (result *BaseResult) SetRaw(raw string) {
+	result.raw = raw
+}
+
+// GetRaw returns the original JSON representation of the result
+func (result *BaseResult) GetRaw() string {
+	return result.raw
 }
 
 func (result *BaseResult) Parse(from string) (err error) {
