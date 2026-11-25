@@ -253,6 +253,7 @@ The above means that out of 10 results that were retrieved and processes, 9 were
 This output formatter accepts four options:
 * `ccstat` for aggregation per country of the probe
 * `asnstat` for aggregation per ASN of the probe
+* `limit:N` to limit the number of CCs or ANSs in the aggregate reports. Defaults to "all"
 * `type:TYPE1+TYPE2+...` to give type hints / focuses to aggregate on
 * `progress` to show a progress indicator as results are loaded
 

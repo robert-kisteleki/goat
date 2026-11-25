@@ -12,6 +12,7 @@ package dnsstat
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -28,6 +29,7 @@ var makeCcStats bool
 var makeAsnStats bool
 var showprogress bool
 var typeFocus []string
+var statLimit uint
 
 type collectorItem struct {
 	Total uint
@@ -67,6 +69,12 @@ func setup(isverbose bool, options []string) {
 		if len(opt) >= 5 && opt[:5] == "type:" {
 			typeFocus = strings.Split(opt[5:], "+")
 			break
+		}
+		if len(opt) >= 6 && opt[:6] == "limit:" {
+			if _, err := fmt.Sscanf(opt[6:], "%d", &statLimit); err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: invalid limit value: %s\n", opt[6:])
+				os.Exit(1)
+			}
 		}
 	}
 	if len(typeFocus) != 0 {
@@ -147,11 +155,11 @@ func finish() {
 		fmt.Printf("%d\t\"%s\"", v.val.Total, v.key)
 		if makeCcStats {
 			fmt.Print("\t")
-			printTopN(v.val.CCs, 5, "")
+			printTopN(v.val.CCs, statLimit, "")
 		}
 		if makeAsnStats {
 			fmt.Print("\t")
-			printTopN(v.val.Asns, 5, "AS")
+			printTopN(v.val.Asns, statLimit, "AS")
 		}
 		fmt.Println()
 		anssum += v.val.Total
@@ -201,7 +209,7 @@ func printTopN(data map[string]uint, max uint, as string) {
 		}
 	}
 	sort.Slice(vpc, func(i, j int) bool { return vpc[i].count > vpc[j].count })
-	for i := 0; i < 10 && i < len(vpc); i++ {
+	for i := 0; i < 10 && i < len(vpc) && (max == 0 || i < int(max)); i++ {
 		fmt.Printf(" %s%s:%d", as, vpc[i].val, vpc[i].count)
 	}
 }

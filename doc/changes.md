@@ -6,6 +6,7 @@
 * ADD: the new `json` output formatter outputs the original JSON result structure
 * CHANGE: dependency updates
 * CHANGE: minor bug fixes
+* CHANGE: add `limit:` to dnsstat's ccstat and asnstat outputs
 
 ## v0.9.0
 
