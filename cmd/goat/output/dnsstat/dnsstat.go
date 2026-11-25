@@ -68,13 +68,14 @@ func setup(isverbose bool, options []string) {
 	for _, opt := range options {
 		if len(opt) >= 5 && opt[:5] == "type:" {
 			typeFocus = strings.Split(opt[5:], "+")
-			break
+			continue
 		}
 		if len(opt) >= 6 && opt[:6] == "limit:" {
 			if _, err := fmt.Sscanf(opt[6:], "%d", &statLimit); err != nil {
 				fmt.Fprintf(os.Stderr, "ERROR: invalid limit value: %s\n", opt[6:])
 				os.Exit(1)
 			}
+			continue
 		}
 	}
 	if len(typeFocus) != 0 {

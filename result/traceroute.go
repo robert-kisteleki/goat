@@ -121,6 +121,7 @@ func (trace *TracerouteResult) Parse(from string) (err error) {
 			}
 			if ihopdata.Late != nil {
 				hopdata.Late = ihopdata.Late
+				hop.Responses = append(hop.Responses, hopdata)
 				continue // no other data is it was a LATE packet
 			}
 			if ihopdata.Rtt != nil {

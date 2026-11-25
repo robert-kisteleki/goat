@@ -567,7 +567,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 		for _, msm := range page.Measurements {
 			measurements <- AsyncMeasurementResult{msm, nil}
 			total++
-			if total >= filter.limit {
+			if filter.limit != 0 && total >= filter.limit {
 				return
 			}
 		}

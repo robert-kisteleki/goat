@@ -241,7 +241,7 @@ func (filter *AnchorFilter) GetAnchors(
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			anchors <- AsyncAnchorResult{Anchor{}, err}
+			anchors <- AsyncAnchorResult{Anchor{}, parseAPIError(resp)}
 			return
 		}
 
