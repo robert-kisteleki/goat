@@ -396,7 +396,7 @@ func (filter *ProbeFilter) GetProbes(
 	for {
 		if err != nil {
 			probes <- AsyncProbeResult{Probe{}, err}
-			return
+			break
 		}
 		defer resp.Body.Close()
 

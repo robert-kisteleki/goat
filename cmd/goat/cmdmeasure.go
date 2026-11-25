@@ -140,7 +140,7 @@ func commandMeasure(args []string) {
 			os.Exit(1)
 		}
 		spec.ApiKey(getApiKey("update_measurements"))
-		ids, err := spec.ParticipationRequest(flags.msmremove, true)
+		ids, err := spec.ParticipationRequest(flags.msmremove, false)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR while trying to update measurement %d: %v\n", flags.msmremove, err)
 			os.Exit(1)

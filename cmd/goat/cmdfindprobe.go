@@ -247,6 +247,8 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 		filter.FilterStatus(goat.ProbeStatusAbandoned)
 	case "W":
 		filter.FilterStatus(goat.ProbeStatusWrittenOff)
+	case "":
+		break
 	default:
 		fmt.Fprintf(os.Stderr, "ERROR: unknown status filter\n")
 		os.Exit(1)

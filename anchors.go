@@ -236,6 +236,7 @@ func (filter *AnchorFilter) GetAnchors(
 	for {
 		if err != nil {
 			anchors <- AsyncAnchorResult{Anchor{}, err}
+			break
 		}
 		defer resp.Body.Close()
 
