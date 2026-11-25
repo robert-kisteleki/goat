@@ -187,7 +187,7 @@ func commandMeasure(args []string) {
 	}
 
 	if !output.Verify(formatter, flagsToOutFormat(flags)) {
-		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for '%s'\n", flagsToOutFormat(flags), formatter)
+		fmt.Fprintf(os.Stderr, "ERROR: unknown or unsupported output format '%s' for '%s'\n", formatter, flagsToOutFormat(flags))
 		os.Exit(1)
 	}
 
