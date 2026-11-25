@@ -374,6 +374,7 @@ func (filter *ProbeFilter) GetProbes(
 		probe, err := GetProbe(filter.verbose, filter.id)
 		if err != nil {
 			probes <- AsyncProbeResult{Probe{}, err}
+			return
 		}
 		probes <- AsyncProbeResult{*probe, nil}
 		return
@@ -415,7 +416,7 @@ func (filter *ProbeFilter) GetProbes(
 		for _, probe := range page.Probes {
 			probes <- AsyncProbeResult{probe, nil}
 			total++
-			if total >= filter.limit {
+			if filter.limit != 0 && total >= filter.limit {
 				return
 			}
 		}

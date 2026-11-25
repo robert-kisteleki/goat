@@ -84,12 +84,8 @@ func processFindAnchorFlags(flags *findAnchorFlags) (
 
 	options["output"] = flags.output
 
-	if flags.limit > 0 {
-		filter.Limit(flags.limit)
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: limit should be positive\n")
-		os.Exit(1)
-	}
+	filter.Limit(flags.limit)
+
 	if flags.count {
 		options["count"] = true
 	}

@@ -122,12 +122,9 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 			os.Exit(1)
 		}
 	}
-	if flags.limit > 0 {
-		filter.Limit(flags.limit)
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: limit should be positive\n")
-		os.Exit(1)
-	}
+
+	filter.Limit(flags.limit)
+
 	if flags.count {
 		options["count"] = true
 	}
@@ -231,7 +228,7 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 		filter.FilterPrefixV4(prefix)
 	}
 	if flags.filterPrefix6 != "" {
-		prefix, err := netip.ParsePrefix(flags.filterPrefix4)
+		prefix, err := netip.ParsePrefix(flags.filterPrefix6)
 		if err != nil || !prefix.Addr().Is6() {
 			fmt.Fprintf(os.Stderr, "ERROR: invalid IPv6 prefix: %s\n", flags.filterPrefix6)
 			os.Exit(1)

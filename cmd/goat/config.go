@@ -107,7 +107,7 @@ func configure() {
 		flagsFindMsm.Name():     flagsFindMsm,
 		flagsGetResult.Name():   flagsGetResult,
 		flagsStatusCheck.Name(): flagsStatusCheck,
-		flagsMeasure.Name():     flagsStatusCheck,
+		flagsMeasure.Name():     flagsMeasure,
 	}
 	setupFlags()
 

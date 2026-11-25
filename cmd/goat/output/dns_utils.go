@@ -23,7 +23,7 @@ func OutputDnsAnswer(detail *result.DnsAnswer) string {
 	ty := result.DnsTypeNames[detail.Type]
 	if ty == "" {
 		// yet unmapped type entries are represented as (Txx)
-		cl = fmt.Sprintf("(T%d)", detail.Type)
+		ty = fmt.Sprintf("(T%d)", detail.Type)
 	}
 	return fmt.Sprintf("[%s %s %s '%s']", cl, ty, detail.Name, detail.Data)
 }

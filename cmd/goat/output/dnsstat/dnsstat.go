@@ -64,7 +64,7 @@ func setup(isverbose bool, options []string) {
 		showprogress = true
 	}
 	for _, opt := range options {
-		if opt[:5] == "type:" {
+		if len(opt) >= 5 && opt[:5] == "type:" {
 			typeFocus = strings.Split(opt[5:], "+")
 			break
 		}

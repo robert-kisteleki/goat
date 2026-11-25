@@ -255,7 +255,7 @@ func (filter *AnchorFilter) GetAnchors(
 		for _, anchor := range page.Anchors {
 			anchors <- AsyncAnchorResult{anchor, nil}
 			total++
-			if total >= filter.limit {
+			if filter.limit != 0 && total >= filter.limit {
 				return
 			}
 		}
