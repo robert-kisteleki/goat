@@ -159,6 +159,12 @@ func (filter *ProbeFilter) FilterCountry(cc string) {
 	filter.params.Add("country_code", cc)
 }
 
+// FilterCountryIn filters for probes in any of the countries on this list
+// (ISO3166-1 alpha-2 codes)
+func (filter *ProbeFilter) FilterCountryIn(list []string) {
+	filter.params.Add("country_code__in", strings.Join(list, ","))
+}
+
 // FilterIDGt filters for probe IDs > some number
 func (filter *ProbeFilter) FilterIDGt(n uint) {
 	filter.params.Add("id__gt", fmt.Sprint(n))
@@ -314,6 +320,16 @@ func (filter *ProbeFilter) verifyFilters() error {
 		// TODO: properly verify country code
 		if len(cc) != 2 {
 			return fmt.Errorf("invalid country code")
+		}
+	}
+
+	// each item on the country list needs to be a two letter code
+	if filter.params.Has("country_code__in") {
+		re := regexp.MustCompile(`^[A-Za-z]{2}$`)
+		for _, cc := range strings.Split(filter.params.Get("country_code__in"), ",") {
+			if !re.MatchString(cc) {
+				return fmt.Errorf("invalid country code in list: '%s'", cc)
+			}
 		}
 	}
 

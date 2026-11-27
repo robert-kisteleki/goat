@@ -146,6 +146,11 @@ func parseFindProbeFlags(flags *findProbeFlags) (
 		filter.FilterCountry(strings.ToUpper(flags.filterCC))
 	}
 
+	if flags.filterCCin != "" {
+		// the list items are verified by goatAPI
+		filter.FilterCountryIn(strings.Split(strings.ToUpper(flags.filterCCin), ","))
+	}
+
 	if flags.filterIDgt != 0 {
 		filter.FilterIDGt(flags.filterIDgt)
 	}

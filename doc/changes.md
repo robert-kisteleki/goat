@@ -3,8 +3,10 @@
 ## next
 
 * ADD: parse the `firmware_version` field of probes
+* FIX: the `ccin` probe filter of `findprobe` had no effect
 * ADD: the new `ts` option prepends each result line with the current timestamp for the "some" and "most" output formatters
 * ADD: the new `json` output formatter outputs the original JSON result structure
+* ADD: implement `ccin` CLI probe filter along with the `FilterCountryIn` API filter
 * CHANGE: dependency updates
 * CHANGE: minor bug fixes
 * CHANGE: add `limit:` to dnsstat's ccstat and asnstat outputs

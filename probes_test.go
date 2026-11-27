@@ -54,6 +54,31 @@ func TestProbeFilterValidator(t *testing.T) {
 	}
 }
 
+// Test if the country list filter is verified and mapped properly
+func TestProbeFilterCountryIn(t *testing.T) {
+	for _, good := range [][]string{{"NL"}, {"NL", "de"}} {
+		filter := NewProbeFilter()
+		filter.FilterCountryIn(good)
+		if err := filter.verifyFilters(); err != nil {
+			t.Fatalf("Good country list %q is not allowed: %v", good, err)
+		}
+	}
+
+	for _, bad := range [][]string{{}, {""}, {"N"}, {"NLD"}, {"N1"}, {"NL", ""}, {"NL", " DE"}, {"NL;DE"}} {
+		filter := NewProbeFilter()
+		filter.FilterCountryIn(bad)
+		if err := filter.verifyFilters(); err == nil {
+			t.Fatalf("Bad country list %q not filtered properly", bad)
+		}
+	}
+
+	filter := NewProbeFilter()
+	filter.FilterCountryIn([]string{"NL", "DE"})
+	if got := filter.params.Get("country_code__in"); got != "NL,DE" {
+		t.Fatalf("Country list parameter is '%s', expected 'NL,DE'", got)
+	}
+}
+
 // Test if the firmware version of a probe is parsed
 func TestProbeParseFirmwareVersion(t *testing.T) {
 	var probe Probe
