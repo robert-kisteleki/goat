@@ -37,6 +37,7 @@ type Probe struct {
 	TotalUptime    uint          `json:"total_uptime"`
 	Type           string        `json:"type"`
 	Tags           []Tag         `json:"tags"`
+	FirmwareVer    uint          `json:"firmware_version"`
 }
 
 type AsyncProbeResult struct {

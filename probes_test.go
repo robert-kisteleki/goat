@@ -7,6 +7,7 @@
 package goat
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -50,5 +51,18 @@ func TestProbeFilterValidator(t *testing.T) {
 	err = filter.verifyFilters()
 	if err == nil {
 		t.Fatalf("Sort order is not filtered properly")
+	}
+}
+
+// Test if the firmware version of a probe is parsed
+func TestProbeParseFirmwareVersion(t *testing.T) {
+	var probe Probe
+
+	err := json.Unmarshal([]byte(`{"id":6001,"firmware_version":4900}`), &probe)
+	if err != nil {
+		t.Fatalf("Error parsing probe: %v", err)
+	}
+	if probe.FirmwareVer != 4900 {
+		t.Fatalf("Firmware version is %d, expected 4900", probe.FirmwareVer)
 	}
 }

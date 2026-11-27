@@ -2,6 +2,7 @@
 
 ## next
 
+* ADD: parse the `firmware_version` field of probes
 * ADD: the new `ts` option prepends each result line with the current timestamp for the "some" and "most" output formatters
 * ADD: the new `json` output formatter outputs the original JSON result structure
 * CHANGE: dependency updates
